@@ -9,7 +9,7 @@ from src.api.schemas.payment import (
     PaymentCreateResponse,
     PaymentCheckResponse,
     PaymentListResponse,
-    PaymentPackage,
+    PaymentPackageItem,
     PaymentPackagesResponse,
     PaymentResponse,
 )
@@ -27,7 +27,7 @@ async def get_payment_packages(
 ) -> PaymentPackagesResponse:
     """Get available payment packages."""
     return PaymentPackagesResponse(
-        packages=[PaymentPackage(**pkg) for pkg in PAYMENT_PACKAGES],
+        packages=[PaymentPackageItem(**pkg) for pkg in PAYMENT_PACKAGES],
         currency=PAYMENT_CURRENCY,
     )
 
@@ -39,7 +39,6 @@ async def create_payment(
     session: SessionDep,
 ) -> PaymentCreateResponse:
     """Create new payment by package ID."""
-    # Find package
     package = next(
         (pkg for pkg in PAYMENT_PACKAGES if pkg["id"] == request.package_id),
         None,
@@ -47,7 +46,7 @@ async def create_payment(
     if not package:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Неизвестный пакет: {request.package_id}. Доступные: standard, vip, premium, platinum",
+            detail=f"Неизвестный пакет: {request.package_id}",
         )
 
     service = PaymentService(session)

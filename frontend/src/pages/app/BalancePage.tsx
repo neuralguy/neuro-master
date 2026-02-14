@@ -10,21 +10,14 @@ import { paymentsApi } from '@/api/payments';
 import { userApi } from '@/api/user';
 import { useUser } from '@/hooks/useUser';
 import { hapticFeedback, showAlert } from '@/utils/telegram';
-import { formatMoney, formatTokens, formatDateTime } from '@/utils/format';
+import { formatTokens, formatDateTime } from '@/utils/format';
 import type { PaymentPackage } from '@/types';
 
-const PACKAGE_COLORS: Record<string, string> = {
-  standard: 'from-blue-500 to-blue-600',
-  vip:      'from-purple-500 to-purple-600',
-  premium:  'from-amber-500 to-orange-500',
-  platinum: 'from-gray-600 to-gray-800',
-};
-
-const PACKAGE_ICONS: Record<string, string> = {
-  standard: '⭐',
-  vip:      '💎',
-  premium:  '👑',
-  platinum: '🏆',
+const PACKAGE_STYLES: Record<string, { gradient: string; icon: string }> = {
+  standard: { gradient: 'from-blue-500 to-blue-600',    icon: '⭐' },
+  vip:      { gradient: 'from-purple-500 to-purple-600', icon: '💎' },
+  premium:  { gradient: 'from-amber-500 to-orange-500',  icon: '👑' },
+  platinum: { gradient: 'from-gray-600 to-gray-800',     icon: '🏆' },
 };
 
 export const BalancePage = () => {
@@ -34,21 +27,18 @@ export const BalancePage = () => {
 
   const { user, updateBalance } = useUser();
 
-  // Fetch payment packages
-  const { data: packagesData } = useQuery({
+  const { data: packagesData, isLoading: packagesLoading } = useQuery({
     queryKey: ['payment-packages'],
     queryFn: paymentsApi.getPackages,
   });
 
-  // Fetch balance history
   const { data: history, isLoading: historyLoading } = useQuery({
     queryKey: ['balance-history'],
     queryFn: () => userApi.getHistory(0, 20),
   });
 
-  // Create payment mutation
   const createPaymentMutation = useMutation({
-    mutationFn: paymentsApi.create,
+    mutationFn: (packageId: string) => paymentsApi.create(packageId),
     onSuccess: (data) => {
       hapticFeedback.success();
       setPendingPaymentId(data.payment_id);
@@ -62,7 +52,6 @@ export const BalancePage = () => {
     },
   });
 
-  // Check payment mutation
   const checkPaymentMutation = useMutation({
     mutationFn: (paymentId: string) => paymentsApi.check(paymentId),
     onSuccess: (data) => {
@@ -89,7 +78,7 @@ export const BalancePage = () => {
     createPaymentMutation.mutate(pkg.id);
   };
 
-  const packages = packagesData?.packages || [];
+  const packages = packagesData?.packages ?? [];
 
   return (
     <div className="p-4 space-y-4">
@@ -147,35 +136,42 @@ export const BalancePage = () => {
       <div className="space-y-3">
         <h2 className="text-lg font-semibold text-tg-text">Пополнить баланс</h2>
 
-        <div className="grid grid-cols-2 gap-3">
-          {packages.map((pkg) => {
-            const gradient = PACKAGE_COLORS[pkg.id] || 'from-blue-500 to-blue-600';
-            const icon = PACKAGE_ICONS[pkg.id] || '⭐';
-            const tokensPerDollar = Math.round(pkg.tokens / pkg.amount);
+        {packagesLoading ? (
+          <Loader text="Загрузка пакетов..." />
+        ) : packages.length === 0 ? (
+          <Card className="text-center py-8">
+            <p className="text-tg-hint">Пакеты недоступны</p>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-2 gap-3">
+            {packages.map((pkg) => {
+              const style = PACKAGE_STYLES[pkg.id] || { gradient: 'from-blue-500 to-blue-600', icon: '⭐' };
+              const tokensPerDollar = Math.round(pkg.tokens / pkg.amount);
 
-            return (
-              <button
-                key={pkg.id}
-                onClick={() => handlePackageSelect(pkg)}
-                disabled={createPaymentMutation.isPending}
-                className={`bg-gradient-to-br ${gradient} text-white rounded-2xl p-4 text-left transition-transform active:scale-95 disabled:opacity-50`}
-              >
-                <div className="text-2xl mb-2">{icon}</div>
-                <div className="font-bold text-base">{pkg.name}</div>
-                <div className="text-2xl font-bold mt-1">${pkg.amount}</div>
-                <div className="flex items-center gap-1 mt-2 text-sm text-white/80">
-                  <Sparkles className="w-3.5 h-3.5" />
-                  <span>{pkg.tokens} токенов</span>
-                </div>
-                {pkg.id !== 'standard' && (
-                  <div className="mt-1 text-xs text-white/60">
-                    ~{tokensPerDollar} токенов/$
+              return (
+                <button
+                  key={pkg.id}
+                  onClick={() => handlePackageSelect(pkg)}
+                  disabled={createPaymentMutation.isPending}
+                  className={`bg-gradient-to-br ${style.gradient} text-white rounded-2xl p-4 text-left transition-transform active:scale-95 disabled:opacity-50`}
+                >
+                  <div className="text-2xl mb-2">{style.icon}</div>
+                  <div className="font-bold text-base">{pkg.name}</div>
+                  <div className="text-2xl font-bold mt-1">${pkg.amount}</div>
+                  <div className="flex items-center gap-1 mt-2 text-sm text-white/80">
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>{pkg.tokens} токенов</span>
                   </div>
-                )}
-              </button>
-            );
-          })}
-        </div>
+                  {tokensPerDollar > 0 && (
+                    <div className="mt-1 text-xs text-white/60">
+                      ~{tokensPerDollar} токенов/$
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* History */}
@@ -184,13 +180,13 @@ export const BalancePage = () => {
 
         {historyLoading ? (
           <Loader text="Загрузка..." />
-        ) : history?.items.length === 0 ? (
+        ) : !history || history.items.length === 0 ? (
           <Card className="text-center py-8">
             <p className="text-tg-hint">История пуста</p>
           </Card>
         ) : (
           <div className="space-y-2">
-            {history?.items.map((item) => (
+            {history.items.map((item) => (
               <Card key={item.id} padding="sm">
                 <div className="flex items-center justify-between">
                   <div>

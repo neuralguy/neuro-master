@@ -14,11 +14,11 @@ TRENDING_PROMPTS_BUTTON_TEXT = "🔥 Трендовые промты"
 EARN_TOKENS_BUTTON_TEXT = "💎 Заработать токены"
 
 # === Telegram Channel ===
-TELEGRAM_CHANNEL_URL = "https://t.me/your_channel"  # <-- замените на реальную ссылку
+TELEGRAM_CHANNEL_URL = "https://t.me/your_channel"
 
 # === Generation ===
-GENERATION_POLL_INTERVAL = 3  # seconds
-GENERATION_MAX_POLL_ATTEMPTS = 120  # 6 minutes max
+GENERATION_POLL_INTERVAL = 3
+GENERATION_MAX_POLL_ATTEMPTS = 120
 
 # === Files ===
 MAX_FILE_SIZE_MB = 10
@@ -33,10 +33,10 @@ PAYMENT_PACKAGES = [
     {"id": "platinum", "name": "Платина",   "amount": 80, "tokens": 2650},
 ]
 PAYMENT_CURRENCY = "USD"
-MIN_PAYMENT_AMOUNT = 10   # долларов
-MAX_PAYMENT_AMOUNT = 80   # долларов
+MIN_PAYMENT_AMOUNT = 10
+MAX_PAYMENT_AMOUNT = 80
 
 # === Cache TTL (seconds) ===
-CACHE_USER_TTL = 300  # 5 minutes
-CACHE_MODELS_TTL = 60  # 1 minute
+CACHE_USER_TTL = 300
+CACHE_MODELS_TTL = 60
 
