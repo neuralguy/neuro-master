@@ -1,10 +1,9 @@
 import { NavLink } from 'react-router-dom';
 import { clsx } from 'clsx';
-import { Home, Sparkles, Image, Wallet, User } from 'lucide-react';
+import { Sparkles, Image, Wallet, User } from 'lucide-react';
 import { hapticFeedback } from '@/utils/telegram';
 
 const navItems = [
-  { to: '/', icon: Home, label: 'Главная' },
   { to: '/generate', icon: Sparkles, label: 'Создать' },
   { to: '/gallery', icon: Image, label: 'Галерея' },
   { to: '/balance', icon: Wallet, label: 'Баланс' },
@@ -37,3 +36,4 @@ export const Navigation = () => {
     </nav>
   );
 };
+

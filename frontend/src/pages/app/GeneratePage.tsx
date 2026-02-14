@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
+import { useSearchParams } from 'react-router-dom';
 import { Upload, X, ChevronDown, ImageIcon, VideoIcon, Paperclip, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { modelsApi } from '@/api/models';
@@ -13,8 +14,12 @@ export default function GeneratePage() {
   const { user, updateBalance } = useUser();
   const { tg } = useTelegram();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [searchParams] = useSearchParams();
 
-  const [activeType, setActiveType] = useState<GenerationType>('image');
+  // Read initial type from URL query param (?type=image or ?type=video)
+  const initialType = (searchParams.get('type') === 'video' ? 'video' : 'image') as GenerationType;
+
+  const [activeType, setActiveType] = useState<GenerationType>(initialType);
   const [selectedModel, setSelectedModel] = useState<AIModel | null>(null);
   const [prompt, setPrompt] = useState('');
   const [aspectRatio, setAspectRatio] = useState('1:1');

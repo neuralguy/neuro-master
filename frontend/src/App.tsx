@@ -6,7 +6,6 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { AdminLayout } from '@/components/layout/AdminLayout';
 import { Loader } from '@/components/ui/Loader';
 
-import { HomePage } from '@/pages/app/HomePage';
 import GeneratePage from '@/pages/app/GeneratePage';
 import { GalleryPage } from '@/pages/app/GalleryPage';
 import { BalancePage } from '@/pages/app/BalancePage';
@@ -29,9 +28,37 @@ const queryClient = new QueryClient({
   },
 });
 
+/**
+ * Read deep-link params from URL (?tab=image, ?tab=video, ?page=profile, etc.)
+ * and return the initial route the app should navigate to.
+ */
+function getInitialRoute(): string {
+  const params = new URLSearchParams(window.location.search);
+
+  const page = params.get('page');
+  if (page === 'profile') {
+    return '/profile';
+  }
+  if (page === 'gallery') {
+    return '/gallery';
+  }
+  if (page === 'balance') {
+    return '/balance';
+  }
+
+  const tab = params.get('tab');
+  if (tab === 'video') {
+    return '/generate?type=video';
+  }
+
+  // По умолчанию — генерация изображений
+  return '/generate?type=image';
+}
+
 const AppContent = () => {
   const { isReady } = useTelegram();
   const { user, isLoading } = useUser();
+  const [initialRoute] = useState(() => getInitialRoute());
 
   if (!isReady || isLoading) {
     return <Loader fullScreen text="Загрузка..." />;
@@ -41,7 +68,7 @@ const AppContent = () => {
     <Routes>
       {/* Main App Routes */}
       <Route path="/" element={<AppLayout />}>
-        <Route index element={<HomePage />} />
+        <Route index element={<Navigate to={initialRoute} replace />} />
         <Route path="generate" element={<GeneratePage />} />
         <Route path="gallery" element={<GalleryPage />} />
         <Route path="balance" element={<BalancePage />} />
@@ -59,7 +86,7 @@ const AppContent = () => {
       )}
 
       {/* Fallback */}
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<Navigate to="/generate" replace />} />
     </Routes>
   );
 };
@@ -75,3 +102,4 @@ export const App = () => {
 };
 
 export default App;
+

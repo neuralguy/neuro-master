@@ -3,7 +3,7 @@
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
 
 from src.config import settings
-from src.shared.constants import PAYMENT_PACKAGES
+from src.shared.constants import PAYMENT_PACKAGES, TELEGRAM_CHANNEL_URL
 
 
 def get_webapp_keyboard() -> InlineKeyboardMarkup:
@@ -14,6 +14,21 @@ def get_webapp_keyboard() -> InlineKeyboardMarkup:
                 InlineKeyboardButton(
                     text="🚀 Открыть приложение",
                     web_app=WebAppInfo(url=settings.WEBAPP_URL),
+                ),
+            ],
+        ]
+    )
+    return keyboard
+
+
+def get_trending_prompts_keyboard() -> InlineKeyboardMarkup:
+    """Get keyboard with link to trending prompts channel."""
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="🔥 Перейти в канал",
+                    url=TELEGRAM_CHANNEL_URL,
                 ),
             ],
         ]
@@ -206,3 +221,4 @@ def get_pagination_keyboard(
         )
     
     return InlineKeyboardMarkup(inline_keyboard=[buttons])
+
