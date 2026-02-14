@@ -1,27 +1,41 @@
 import { useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { Wallet, ExternalLink, CheckCircle, Clock, AlertCircle } from 'lucide-react';
+import { Wallet, ExternalLink, CheckCircle, Clock, Sparkles } from 'lucide-react';
 
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
 import { Loader } from '@/components/ui/Loader';
 
 import { paymentsApi } from '@/api/payments';
 import { userApi } from '@/api/user';
 import { useUser } from '@/hooks/useUser';
 import { hapticFeedback, showAlert } from '@/utils/telegram';
-import { formatMoney, formatTokens, formatDateTime, getOperationTypeText } from '@/utils/format';
+import { formatMoney, formatTokens, formatDateTime } from '@/utils/format';
+import type { PaymentPackage } from '@/types';
+
+const PACKAGE_COLORS: Record<string, string> = {
+  standard: 'from-blue-500 to-blue-600',
+  vip:      'from-purple-500 to-purple-600',
+  premium:  'from-amber-500 to-orange-500',
+  platinum: 'from-gray-600 to-gray-800',
+};
+
+const PACKAGE_ICONS: Record<string, string> = {
+  standard: '⭐',
+  vip:      '💎',
+  premium:  '👑',
+  platinum: '🏆',
+};
 
 export const BalancePage = () => {
-  const [customAmount, setCustomAmount] = useState('');
   const [pendingPaymentId, setPendingPaymentId] = useState<string | null>(null);
   const [pendingPaymentUrl, setPendingPaymentUrl] = useState<string | null>(null);
-  
+  const [pendingPackageName, setPendingPackageName] = useState<string | null>(null);
+
   const { user, updateBalance } = useUser();
 
   // Fetch payment packages
-  const { data: packages } = useQuery({
+  const { data: packagesData } = useQuery({
     queryKey: ['payment-packages'],
     queryFn: paymentsApi.getPackages,
   });
@@ -39,6 +53,7 @@ export const BalancePage = () => {
       hapticFeedback.success();
       setPendingPaymentId(data.payment_id);
       setPendingPaymentUrl(data.confirmation_url);
+      setPendingPackageName(data.package_name);
       window.open(data.confirmation_url, '_blank');
     },
     onError: (error: Error) => {
@@ -57,6 +72,7 @@ export const BalancePage = () => {
         updateBalance(data.new_balance);
         setPendingPaymentId(null);
         setPendingPaymentUrl(null);
+        setPendingPackageName(null);
       } else {
         hapticFeedback.warning();
         showAlert(data.message);
@@ -68,23 +84,12 @@ export const BalancePage = () => {
     },
   });
 
-  const handlePayment = (amount: number) => {
+  const handlePackageSelect = (pkg: PaymentPackage) => {
     hapticFeedback.medium();
-    createPaymentMutation.mutate(amount);
+    createPaymentMutation.mutate(pkg.id);
   };
 
-  const handleCustomPayment = () => {
-    const amount = parseInt(customAmount);
-    if (isNaN(amount) || amount < (packages?.min_amount || 50)) {
-      showAlert(`Минимальная сумма: ${packages?.min_amount || 50} ₽`);
-      return;
-    }
-    if (amount > (packages?.max_amount || 50000)) {
-      showAlert(`Максимальная сумма: ${packages?.max_amount || 50000} ₽`);
-      return;
-    }
-    handlePayment(amount);
-  };
+  const packages = packagesData?.packages || [];
 
   return (
     <div className="p-4 space-y-4">
@@ -109,9 +114,11 @@ export const BalancePage = () => {
           <div className="flex items-center gap-3">
             <Clock className="w-6 h-6 text-yellow-600" />
             <div className="flex-1">
-              <p className="font-medium text-yellow-800">Ожидание оплаты</p>
+              <p className="font-medium text-yellow-800">
+                Ожидание оплаты{pendingPackageName ? ` — ${pendingPackageName}` : ''}
+              </p>
               <p className="text-sm text-yellow-600">
-                Завершите оплату и нажмите "Проверить"
+                Завершите оплату и нажмите «Проверить»
               </p>
             </div>
           </div>
@@ -138,46 +145,43 @@ export const BalancePage = () => {
 
       {/* Payment Packages */}
       <div className="space-y-3">
-        <h2 className="text-lg font-semibold text-tg-text">Пополнить</h2>
-        
-        <div className="grid grid-cols-3 gap-2">
-          {packages?.packages.map((amount) => (
-            <Button
-              key={amount}
-              variant="outline"
-              onClick={() => handlePayment(amount)}
-              disabled={createPaymentMutation.isPending}
-            >
-              {formatMoney(amount)}
-            </Button>
-          ))}
-        </div>
+        <h2 className="text-lg font-semibold text-tg-text">Пополнить баланс</h2>
 
-        <div className="flex gap-2">
-          <Input
-            type="number"
-            placeholder="Другая сумма"
-            value={customAmount}
-            onChange={(e) => setCustomAmount(e.target.value)}
-            className="flex-1"
-          />
-          <Button
-            onClick={handleCustomPayment}
-            disabled={createPaymentMutation.isPending || !customAmount}
-          >
-            Оплатить
-          </Button>
-        </div>
+        <div className="grid grid-cols-2 gap-3">
+          {packages.map((pkg) => {
+            const gradient = PACKAGE_COLORS[pkg.id] || 'from-blue-500 to-blue-600';
+            const icon = PACKAGE_ICONS[pkg.id] || '⭐';
+            const tokensPerDollar = Math.round(pkg.tokens / pkg.amount);
 
-        <p className="text-xs text-tg-hint text-center">
-          1 токен = 1 ₽ • Минимум {packages?.min_amount || 50} ₽
-        </p>
+            return (
+              <button
+                key={pkg.id}
+                onClick={() => handlePackageSelect(pkg)}
+                disabled={createPaymentMutation.isPending}
+                className={`bg-gradient-to-br ${gradient} text-white rounded-2xl p-4 text-left transition-transform active:scale-95 disabled:opacity-50`}
+              >
+                <div className="text-2xl mb-2">{icon}</div>
+                <div className="font-bold text-base">{pkg.name}</div>
+                <div className="text-2xl font-bold mt-1">${pkg.amount}</div>
+                <div className="flex items-center gap-1 mt-2 text-sm text-white/80">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>{pkg.tokens} токенов</span>
+                </div>
+                {pkg.id !== 'standard' && (
+                  <div className="mt-1 text-xs text-white/60">
+                    ~{tokensPerDollar} токенов/$
+                  </div>
+                )}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* History */}
       <div className="space-y-3">
         <h2 className="text-lg font-semibold text-tg-text">История</h2>
-        
+
         {historyLoading ? (
           <Loader text="Загрузка..." />
         ) : history?.items.length === 0 ? (
@@ -211,3 +215,4 @@ export const BalancePage = () => {
     </div>
   );
 };
+

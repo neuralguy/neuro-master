@@ -9,28 +9,27 @@ from src.api.schemas.payment import (
     PaymentCreateResponse,
     PaymentCheckResponse,
     PaymentListResponse,
+    PaymentPackage,
+    PaymentPackagesResponse,
     PaymentResponse,
 )
 from src.core.exceptions import PaymentError
 from src.modules.payments.service import PaymentService
-from src.shared.constants import MAX_PAYMENT_AMOUNT, MIN_PAYMENT_AMOUNT, PAYMENT_PACKAGES
+from src.shared.constants import PAYMENT_PACKAGES, PAYMENT_CURRENCY
 from src.shared.enums import PaymentStatus
 
 router = APIRouter()
 
 
-@router.get("/packages")
+@router.get("/packages", response_model=PaymentPackagesResponse)
 async def get_payment_packages(
     current_user: CurrentUser,
-) -> dict:
+) -> PaymentPackagesResponse:
     """Get available payment packages."""
-    return {
-        "packages": PAYMENT_PACKAGES,
-        "min_amount": MIN_PAYMENT_AMOUNT,
-        "max_amount": MAX_PAYMENT_AMOUNT,
-        "currency": "RUB",
-        "rate": 1,
-    }
+    return PaymentPackagesResponse(
+        packages=[PaymentPackage(**pkg) for pkg in PAYMENT_PACKAGES],
+        currency=PAYMENT_CURRENCY,
+    )
 
 
 @router.post("", response_model=PaymentCreateResponse, status_code=status.HTTP_201_CREATED)
@@ -39,34 +38,36 @@ async def create_payment(
     current_user: CurrentUser,
     session: SessionDep,
 ) -> PaymentCreateResponse:
-    """Create new payment."""
-    if request.amount < MIN_PAYMENT_AMOUNT:
+    """Create new payment by package ID."""
+    # Find package
+    package = next(
+        (pkg for pkg in PAYMENT_PACKAGES if pkg["id"] == request.package_id),
+        None,
+    )
+    if not package:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Минимальная сумма: {MIN_PAYMENT_AMOUNT} ₽",
+            detail=f"Неизвестный пакет: {request.package_id}. Доступные: standard, vip, premium, platinum",
         )
-    
-    if request.amount > MAX_PAYMENT_AMOUNT:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Максимальная сумма: {MAX_PAYMENT_AMOUNT} ₽",
-        )
-    
+
     service = PaymentService(session)
-    
+
     try:
         payment, confirmation_url = await service.create_payment(
             user_id=current_user.id,
-            amount=request.amount,
+            amount=package["amount"],
+            tokens=package["tokens"],
+            package_name=package["name"],
         )
-        
+
         return PaymentCreateResponse(
             payment_id=payment.id,
             amount=payment.amount,
             tokens=payment.tokens,
+            package_name=package["name"],
             confirmation_url=confirmation_url,
         )
-        
+
     except PaymentError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -82,17 +83,17 @@ async def check_payment(
 ) -> PaymentCheckResponse:
     """Check payment status."""
     service = PaymentService(session)
-    
+
     payment = await service.get_payment(payment_id)
-    
+
     if not payment or payment.user_id != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Платёж не найден",
         )
-    
+
     result = await service.check_payment_status(payment)
-    
+
     if result["success"]:
         return PaymentCheckResponse(
             payment_id=payment_id,
@@ -108,7 +109,7 @@ async def check_payment(
             "canceled": "Платёж отменён",
             "error": "Ошибка проверки платежа",
         }
-        
+
         return PaymentCheckResponse(
             payment_id=payment_id,
             status=PaymentStatus.PENDING if result["status"] == "pending" else PaymentStatus.FAILED,
@@ -127,13 +128,14 @@ async def get_payments(
     """Get user's payment history."""
     service = PaymentService(session)
     payments = await service.get_user_payments(current_user.id, offset, limit)
-    
+
     from src.modules.payments.repository import PaymentRepository
     repo = PaymentRepository(session)
     all_payments = await repo.get_user_payments(current_user.id, 0, 1000)
     total = len(all_payments)
-    
+
     return PaymentListResponse(
         items=[PaymentResponse.model_validate(p) for p in payments],
         total=total,
     )
+

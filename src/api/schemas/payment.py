@@ -6,9 +6,23 @@ from pydantic import BaseModel, Field
 from src.shared.enums import PaymentStatus
 
 
+class PaymentPackage(BaseModel):
+    """Single payment package."""
+    id: str
+    name: str
+    amount: int
+    tokens: int
+
+
+class PaymentPackagesResponse(BaseModel):
+    """Available payment packages."""
+    packages: list[PaymentPackage]
+    currency: str
+
+
 class PaymentCreateRequest(BaseModel):
     """Create payment request."""
-    amount: int = Field(..., ge=50, le=50000)
+    package_id: str = Field(..., description="ID пакета: standard, vip, premium, platinum")
 
 
 class PaymentCreateResponse(BaseModel):
@@ -16,6 +30,7 @@ class PaymentCreateResponse(BaseModel):
     payment_id: UUID
     amount: int
     tokens: int
+    package_name: str
     confirmation_url: str
 
 
@@ -45,3 +60,4 @@ class PaymentListResponse(BaseModel):
     """List of payments response."""
     items: list[PaymentResponse]
     total: int
+

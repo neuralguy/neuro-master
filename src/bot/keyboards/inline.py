@@ -63,41 +63,35 @@ def get_payment_keyboard(payment_url: str, payment_id: str) -> InlineKeyboardMar
     return keyboard
 
 
-def get_payment_amounts_keyboard() -> InlineKeyboardMarkup:
-    """Get keyboard with predefined payment amounts."""
+def get_payment_packages_keyboard() -> InlineKeyboardMarkup:
+    """Get keyboard with payment packages (2x2 grid)."""
     buttons = []
-    row = []
-    
-    for i, amount in enumerate(PAYMENT_PACKAGES):
-        row.append(
+
+    for pkg in PAYMENT_PACKAGES:
+        buttons.append(
             InlineKeyboardButton(
-                text=f"{amount} ₽",
-                callback_data=f"pay_amount:{amount}",
+                text=f"{pkg['name']} — ${pkg['amount']} ({pkg['tokens']} ⭐)",
+                callback_data=f"pay_package:{pkg['id']}",
             )
         )
-        if len(row) == 3:
-            buttons.append(row)
-            row = []
-    
-    if row:
-        buttons.append(row)
-    
-    # Add custom amount button
-    buttons.append([
-        InlineKeyboardButton(
-            text="💰 Другая сумма",
-            callback_data="pay_custom",
-        )
-    ])
-    
-    buttons.append([
-        InlineKeyboardButton(
-            text="❌ Отмена",
-            callback_data="pay_cancel",
-        )
-    ])
-    
-    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [buttons[0], buttons[1]],
+            [buttons[2], buttons[3]],
+            [
+                InlineKeyboardButton(
+                    text="❌ Отмена",
+                    callback_data="pay_cancel",
+                )
+            ],
+        ]
+    )
+    return keyboard
+
+
+# Keep old name for backward compat
+get_payment_amounts_keyboard = get_payment_packages_keyboard
 
 
 def get_referral_keyboard(referral_link: str) -> InlineKeyboardMarkup:
@@ -196,7 +190,7 @@ def get_pagination_keyboard(
 ) -> InlineKeyboardMarkup:
     """Get pagination keyboard."""
     buttons = []
-    
+
     if current_page > 1:
         buttons.append(
             InlineKeyboardButton(
@@ -204,14 +198,14 @@ def get_pagination_keyboard(
                 callback_data=f"{callback_prefix}:{current_page - 1}",
             )
         )
-    
+
     buttons.append(
         InlineKeyboardButton(
             text=f"{current_page}/{total_pages}",
             callback_data="noop",
         )
     )
-    
+
     if current_page < total_pages:
         buttons.append(
             InlineKeyboardButton(
@@ -219,6 +213,6 @@ def get_pagination_keyboard(
                 callback_data=f"{callback_prefix}:{current_page + 1}",
             )
         )
-    
+
     return InlineKeyboardMarkup(inline_keyboard=[buttons])
 

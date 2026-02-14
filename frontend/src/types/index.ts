@@ -107,6 +107,18 @@ export interface GalleryItem {
 // Payment types
 export type PaymentStatus = 'pending' | 'success' | 'failed' | 'cancelled';
 
+export interface PaymentPackage {
+  id: string;
+  name: string;
+  amount: number;
+  tokens: number;
+}
+
+export interface PaymentPackagesResponse {
+  packages: PaymentPackage[];
+  currency: string;
+}
+
 export interface Payment {
   id: string;
   amount: number;
@@ -114,14 +126,6 @@ export interface Payment {
   status: PaymentStatus;
   created_at: string;
   paid_at: string | null;
-}
-
-export interface PaymentPackages {
-  packages: number[];
-  min_amount: number;
-  max_amount: number;
-  currency: string;
-  rate: number;
 }
 
 // Admin types
@@ -162,3 +166,4 @@ export interface LogEntry {
   request_id: string | null;
   exception?: string;
 }
+

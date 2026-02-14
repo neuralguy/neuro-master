@@ -26,9 +26,15 @@ ALLOWED_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 ALLOWED_VIDEO_EXTENSIONS = {".mp4", ".mov", ".webm"}
 
 # === Payments ===
-MIN_PAYMENT_AMOUNT = 50  # рублей
-MAX_PAYMENT_AMOUNT = 50000  # рублей
-PAYMENT_PACKAGES = [100, 300, 500, 1000, 2000, 5000]  # предустановленные суммы
+PAYMENT_PACKAGES = [
+    {"id": "standard", "name": "Стандарт", "amount": 10, "tokens": 300},
+    {"id": "vip",      "name": "VIP",      "amount": 20, "tokens": 630},
+    {"id": "premium",  "name": "Премиум",  "amount": 40, "tokens": 1300},
+    {"id": "platinum", "name": "Платина",   "amount": 80, "tokens": 2650},
+]
+PAYMENT_CURRENCY = "USD"
+MIN_PAYMENT_AMOUNT = 10   # долларов
+MAX_PAYMENT_AMOUNT = 80   # долларов
 
 # === Cache TTL (seconds) ===
 CACHE_USER_TTL = 300  # 5 minutes
