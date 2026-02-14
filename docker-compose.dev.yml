@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    container_name: ai-content-bot-dev
+    env_file:
+      - .env
+    environment:
+      - DEV_MODE=1
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./src:/app/src
+      - ./storage:/app/storage
+      - ./logs:/app/logs
+      - ./data:/app/data
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - app-network
+    command: python -m src.main
+
+  redis:
+    image: redis:7-alpine
+    container_name: ai-content-redis-dev
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
