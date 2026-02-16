@@ -33,7 +33,7 @@ class PaymentRepository:
         self.session.add(payment)
         await self.session.flush()
         await self.session.refresh(payment)
-        
+
         logger.info(f"Payment created | id={payment.id}, user_id={user_id}, amount={amount}")
         return payment
 
@@ -44,10 +44,10 @@ class PaymentRepository:
         )
         return result.scalar_one_or_none()
 
-    async def get_by_yookassa_id(self, yookassa_id: str) -> Payment | None:
-        """Get payment by YooKassa ID."""
+    async def get_by_lava_id(self, lava_id: str) -> Payment | None:
+        """Get payment by Lava.top ID."""
         result = await self.session.execute(
-            select(Payment).where(Payment.yookassa_id == yookassa_id)
+            select(Payment).where(Payment.lava_id == lava_id)
         )
         return result.scalar_one_or_none()
 
@@ -56,7 +56,7 @@ class PaymentRepository:
         for key, value in kwargs.items():
             if hasattr(payment, key):
                 setattr(payment, key, value)
-        
+
         await self.session.flush()
         await self.session.refresh(payment)
         return payment
@@ -64,7 +64,7 @@ class PaymentRepository:
     async def mark_as_paid(
         self,
         payment_id: uuid.UUID,
-        yookassa_status: str | None = None,
+        lava_status: str | None = None,
     ) -> None:
         """Mark payment as successful."""
         await self.session.execute(
@@ -72,7 +72,7 @@ class PaymentRepository:
             .where(Payment.id == payment_id)
             .values(
                 status=PaymentStatus.SUCCESS,
-                yookassa_status=yookassa_status,
+                lava_status=lava_status,
                 paid_at=datetime.utcnow(),
             )
         )
@@ -82,7 +82,7 @@ class PaymentRepository:
     async def mark_as_failed(
         self,
         payment_id: uuid.UUID,
-        yookassa_status: str | None = None,
+        lava_status: str | None = None,
     ) -> None:
         """Mark payment as failed."""
         await self.session.execute(
@@ -90,7 +90,7 @@ class PaymentRepository:
             .where(Payment.id == payment_id)
             .values(
                 status=PaymentStatus.FAILED,
-                yookassa_status=yookassa_status,
+                lava_status=lava_status,
             )
         )
         await self.session.flush()
@@ -105,12 +105,12 @@ class PaymentRepository:
     ) -> list[Payment]:
         """Get user payments with optional filtering."""
         query = select(Payment).where(Payment.user_id == user_id)
-        
+
         if status:
             query = query.where(Payment.status == status)
-        
+
         query = query.order_by(Payment.created_at.desc()).offset(offset).limit(limit)
-        
+
         result = await self.session.execute(query)
         return list(result.scalars().all())
 
@@ -122,12 +122,12 @@ class PaymentRepository:
     ) -> list[Payment]:
         """Get all payments for admin."""
         query = select(Payment)
-        
+
         if status:
             query = query.where(Payment.status == status)
-        
+
         query = query.order_by(Payment.created_at.desc()).offset(offset).limit(limit)
-        
+
         result = await self.session.execute(query)
         return list(result.scalars().all())
 
@@ -140,13 +140,13 @@ class PaymentRepository:
             ).where(Payment.status == PaymentStatus.SUCCESS)
         )
         total_count, total_amount = total_result.one()
-        
+
         pending_result = await self.session.execute(
             select(func.count(Payment.id))
             .where(Payment.status == PaymentStatus.PENDING)
         )
         pending_count = pending_result.scalar_one()
-        
+
         return {
             "total_payments": total_count or 0,
             "total_amount": total_amount or 0,
@@ -181,7 +181,7 @@ class BalanceHistoryRepository:
         self.session.add(record)
         await self.session.flush()
         await self.session.refresh(record)
-        
+
         logger.debug(
             f"Balance history created | user_id={user_id}, "
             f"amount={amount}, type={operation_type.value}"
@@ -197,12 +197,12 @@ class BalanceHistoryRepository:
     ) -> list[BalanceHistory]:
         """Get user balance history."""
         query = select(BalanceHistory).where(BalanceHistory.user_id == user_id)
-        
+
         if operation_type:
             query = query.where(BalanceHistory.operation_type == operation_type)
-        
+
         query = query.order_by(BalanceHistory.created_at.desc()).offset(offset).limit(limit)
-        
+
         result = await self.session.execute(query)
         return list(result.scalars().all())
 
@@ -215,9 +215,9 @@ class BalanceHistoryRepository:
         query = select(func.count(BalanceHistory.id)).where(
             BalanceHistory.user_id == user_id
         )
-        
+
         if operation_type:
             query = query.where(BalanceHistory.operation_type == operation_type)
-        
+
         result = await self.session.execute(query)
         return result.scalar_one()
