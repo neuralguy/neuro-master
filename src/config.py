@@ -37,12 +37,11 @@ class Settings(BaseSettings):
     KIE_API_KEY: SecretStr = Field(default="")
     KIE_API_URL: str = Field(default="https://api.kie.ai")
 
-    # === YooKassa ===
-    YOOKASSA_SHOP_ID_PROD: str = Field(default="")
-    YOOKASSA_SECRET_PROD: SecretStr = Field(default="")
-    YOOKASSA_SHOP_ID_DEV: str = Field(default="")
-    YOOKASSA_SECRET_DEV: SecretStr = Field(default="")
-    YOOKASSA_RETURN_URL: str = Field(default="")
+    # === Lava.top ===
+    LAVA_API_KEY: SecretStr = Field(default="", description="Lava.top API key")
+    LAVA_API_URL: str = Field(default="https://gate.lava.top", description="Lava.top API base URL")
+    LAVA_CURRENCY: str = Field(default="USD", description="Payment currency: RUB, USD, EUR")
+    LAVA_WEBHOOK_SECRET: SecretStr = Field(default="", description="Lava.top webhook secret")
 
     # === Application ===
     SECRET_KEY: SecretStr = Field(default="change-me-in-production-min-32-chars")
@@ -66,17 +65,7 @@ class Settings(BaseSettings):
         """Get database URL based on environment."""
         return self.DATABASE_URL_DEV if self.DEV_MODE else self.DATABASE_URL_PROD
 
-    @computed_field
-    @property
-    def YOOKASSA_SHOP_ID(self) -> str:
-        """Get YooKassa shop ID based on environment."""
-        return self.YOOKASSA_SHOP_ID_DEV if self.DEV_MODE else self.YOOKASSA_SHOP_ID_PROD
 
-    @computed_field
-    @property
-    def YOOKASSA_SECRET(self) -> SecretStr:
-        """Get YooKassa secret based on environment."""
-        return self.YOOKASSA_SECRET_DEV if self.DEV_MODE else self.YOOKASSA_SECRET_PROD
 
     @computed_field
     @property

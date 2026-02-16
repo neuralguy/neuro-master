@@ -27,10 +27,10 @@ ALLOWED_VIDEO_EXTENSIONS = {".mp4", ".mov", ".webm"}
 
 # === Payments ===
 PAYMENT_PACKAGES = [
-    {"id": "standard", "name": "Стандарт", "amount": 10, "tokens": 300},
-    {"id": "vip",      "name": "VIP",      "amount": 20, "tokens": 630},
-    {"id": "premium",  "name": "Премиум",  "amount": 40, "tokens": 1300},
-    {"id": "platinum", "name": "Платина",   "amount": 80, "tokens": 2650},
+    {"id": "standard", "name": "Стандарт", "amount": 10, "tokens": 300,  "offer_id": ""},
+    {"id": "vip",      "name": "VIP",      "amount": 20, "tokens": 630,  "offer_id": ""},
+    {"id": "premium",  "name": "Премиум",  "amount": 40, "tokens": 1300, "offer_id": ""},
+    {"id": "platinum", "name": "Платина",   "amount": 80, "tokens": 2650, "offer_id": ""},
 ]
 PAYMENT_CURRENCY = "USD"
 MIN_PAYMENT_AMOUNT = 10
