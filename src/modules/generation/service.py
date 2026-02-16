@@ -13,7 +13,7 @@ from src.core.exceptions import InsufficientBalanceError, NotFoundError, Validat
 from src.modules.ai_models.repository import AIModelRepository
 from src.modules.gallery.repository import GalleryRepository
 from src.modules.generation.models import Generation
-from src.modules.generation.providers import GenerationRequest, kie_provider
+from src.modules.generation.providers import GenerationRequest, kie_provider, poyo_provider
 from src.modules.generation.repository import GenerationRepository
 from src.modules.payments.repository import BalanceHistoryRepository
 from src.modules.user.repository import UserRepository
@@ -31,7 +31,18 @@ class GenerationService:
         self.model_repo = AIModelRepository(session)
         self.gallery_repo = GalleryRepository(session)
         self.balance_history_repo = BalanceHistoryRepository(session)
-        self.provider = kie_provider
+        self._providers = {
+            "kie.ai": kie_provider,
+            "poyo.ai": poyo_provider,
+        }
+
+    def _get_provider(self, provider_name: str):
+        """Get provider instance by name."""
+        provider = self._providers.get(provider_name)
+        if not provider:
+            logger.warning(f"Unknown provider '{provider_name}', falling back to kie.ai")
+            return kie_provider
+        return provider
 
     async def create_generation(
         self,
@@ -90,6 +101,7 @@ class GenerationService:
             params={
                 "aspect_ratio": aspect_ratio,
                 "duration": duration,
+                "_provider": model.provider,
                 **(extra_params or {}),
             },
         )
@@ -134,8 +146,11 @@ class GenerationService:
                 extra_params=generation.params,
             )
             
+            # Select provider based on model
+            provider = self._get_provider(generation.params.get("_provider", "kie.ai"))
+            
             # Create task on provider
-            task = await self.provider.create_task(request)
+            task = await provider.create_task(request)
             
             # Update generation with task ID
             async with self.session.begin_nested():
@@ -146,7 +161,7 @@ class GenerationService:
             await self.session.commit()
             
             # Poll for completion
-            await self._poll_generation(generation.id, task.task_id)
+            await self._poll_generation(generation.id, task.task_id, provider_name=generation.params.get("_provider", "kie.ai"))
             
         except Exception as e:
             logger.exception(f"Generation processing failed | id={generation.id}, error={e}")
@@ -166,14 +181,16 @@ class GenerationService:
         task_id: str,
         max_attempts: int = 120,
         interval: float = 3.0,
+        provider_name: str = "kie.ai",
     ) -> None:
         """Poll for generation completion."""
+        provider = self._get_provider(provider_name)
         
         for attempt in range(max_attempts):
             await asyncio.sleep(interval)
             
             try:
-                task = await self.provider.get_task_status(task_id)
+                task = await provider.get_task_status(task_id)
                 
                 if task.status == "success":
                     # Download and save result

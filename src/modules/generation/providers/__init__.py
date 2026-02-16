@@ -6,6 +6,7 @@ from src.modules.generation.providers.base import (
     GenerationTask,
 )
 from src.modules.generation.providers.kie import KieProvider, kie_provider
+from src.modules.generation.providers.poyo import PoyoProvider, poyo_provider
 
 __all__ = [
     "BaseGenerationProvider",
@@ -13,4 +14,6 @@ __all__ = [
     "GenerationTask",
     "KieProvider",
     "kie_provider",
+    "PoyoProvider",
+    "poyo_provider",
 ]

@@ -37,6 +37,10 @@ class Settings(BaseSettings):
     KIE_API_KEY: SecretStr = Field(default="")
     KIE_API_URL: str = Field(default="https://api.kie.ai")
 
+    # === poyo.ai ===
+    POYO_API_KEY: SecretStr = Field(default="")
+    POYO_API_URL: str = Field(default="https://api.poyo.ai")
+
     # === Lava.top ===
     LAVA_API_KEY: SecretStr = Field(default="", description="Lava.top API key")
     LAVA_API_URL: str = Field(default="https://gate.lava.top", description="Lava.top API base URL")
