@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { Wallet, ExternalLink, CheckCircle, Clock, Sparkles } from 'lucide-react';
+import { Wallet, ExternalLink, CheckCircle, Clock, Sparkles, AlertCircle } from 'lucide-react';
 
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -27,9 +27,11 @@ export const BalancePage = () => {
 
   const { user, updateBalance } = useUser();
 
-  const { data: packagesData, isLoading: packagesLoading } = useQuery({
+  const { data: packagesData, isLoading: packagesLoading, isError: packagesError, refetch: refetchPackages } = useQuery({
     queryKey: ['payment-packages'],
     queryFn: paymentsApi.getPackages,
+    staleTime: 5 * 60 * 1000,
+    retry: 2,
   });
 
   const { data: history, isLoading: historyLoading } = useQuery({
@@ -138,6 +140,16 @@ export const BalancePage = () => {
 
         {packagesLoading ? (
           <Loader text="Загрузка пакетов..." />
+        ) : packagesError ? (
+          <Card className="text-center py-8">
+            <div className="flex flex-col items-center gap-3">
+              <AlertCircle className="w-8 h-8 text-red-400" />
+              <p className="text-tg-hint">Не удалось загрузить пакеты</p>
+              <Button variant="outline" size="sm" onClick={() => refetchPackages()}>
+                Попробовать снова
+              </Button>
+            </div>
+          </Card>
         ) : packages.length === 0 ? (
           <Card className="text-center py-8">
             <p className="text-tg-hint">Пакеты недоступны</p>

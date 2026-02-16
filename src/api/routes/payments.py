@@ -20,17 +20,13 @@ from src.shared.enums import PaymentStatus
 
 router = APIRouter()
 
-
 @router.get("/packages", response_model=PaymentPackagesResponse)
-async def get_payment_packages(
-    current_user: CurrentUser,
-) -> PaymentPackagesResponse:
-    """Get available payment packages."""
+async def get_payment_packages() -> PaymentPackagesResponse:
+    """Get available payment packages (public endpoint)."""
     return PaymentPackagesResponse(
         packages=[PaymentPackageItem(**pkg) for pkg in PAYMENT_PACKAGES],
         currency=PAYMENT_CURRENCY,
     )
-
 
 @router.post("", response_model=PaymentCreateResponse, status_code=status.HTTP_201_CREATED)
 async def create_payment(
@@ -72,7 +68,6 @@ async def create_payment(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=e.message,
         )
-
 
 @router.post("/{payment_id}/check", response_model=PaymentCheckResponse)
 async def check_payment(
@@ -116,7 +111,6 @@ async def check_payment(
             message=status_messages.get(result["status"], f"Статус: {result['status']}"),
         )
 
-
 @router.get("", response_model=PaymentListResponse)
 async def get_payments(
     current_user: CurrentUser,
@@ -124,7 +118,7 @@ async def get_payments(
     offset: int = 0,
     limit: int = 50,
 ) -> PaymentListResponse:
-    """Get user's payment history."""
+    """Get user payment history."""
     service = PaymentService(session)
     payments = await service.get_user_payments(current_user.id, offset, limit)
 
@@ -137,4 +131,3 @@ async def get_payments(
         items=[PaymentResponse.model_validate(p) for p in payments],
         total=total,
     )
-
