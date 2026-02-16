@@ -35,11 +35,15 @@ COPY alembic.ini .
 # Copy built frontend
 COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
 
+# Copy entrypoint
+COPY entrypoint.sh .
+RUN chmod +x entrypoint.sh
+
 # Create directories
 RUN mkdir -p /app/storage/generations /app/storage/temp /app/logs /app/data
 
 # Expose port
 EXPOSE 8000
 
-# Run application
-CMD ["python", "-m", "src.main"]
+# Run application (migrations + start)
+ENTRYPOINT ["./entrypoint.sh"]
