@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getTelegram, TelegramWebApp } from '@/utils/telegram';
+import { getTelegram, getTokenAuth, TelegramWebApp } from '@/utils/telegram';
 
 export const useTelegram = () => {
   const [tg, setTg] = useState<TelegramWebApp | null>(null);
@@ -12,7 +12,6 @@ export const useTelegram = () => {
       setTg(telegram);
       telegram.ready();
       telegram.expand();
-      setIsReady(true);
       
       // Set theme colors
       document.documentElement.style.setProperty(
@@ -27,10 +26,10 @@ export const useTelegram = () => {
         '--tg-theme-secondary-bg-color',
         telegram.themeParams.secondary_bg_color || '#f4f4f5'
       );
-    } else {
-      // Running outside Telegram (dev mode)
-      setIsReady(true);
     }
+
+    // Ready if we have initData OR token auth OR running in dev mode (outside TG)
+    setIsReady(true);
   }, []);
 
   return {
@@ -39,5 +38,6 @@ export const useTelegram = () => {
     user: tg?.initDataUnsafe?.user,
     colorScheme: tg?.colorScheme || 'light',
     initData: tg?.initData || '',
+    hasTokenAuth: !!getTokenAuth(),
   };
 };

@@ -57,11 +57,29 @@ function getInitialRoute(): string {
 
 const AppContent = () => {
   const { isReady } = useTelegram();
-  const { user, isLoading } = useUser();
+  const { user, isLoading, error } = useUser();
   const [initialRoute] = useState(() => getInitialRoute());
 
-  if (!isReady || isLoading) {
+  if (!isReady) {
     return <Loader fullScreen text="Загрузка..." />;
+  }
+
+  if (isLoading) {
+    return <Loader fullScreen text="Авторизация..." />;
+  }
+
+  if (error) {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center bg-tg-bg z-50 p-4">
+        <div className="text-center">
+          <p className="text-lg font-semibold text-tg-text mb-2">Ошибка авторизации</p>
+          <p className="text-sm text-tg-hint mb-4">{error}</p>
+          <p className="text-xs text-tg-hint">
+            Попробуйте открыть приложение заново из бота
+          </p>
+        </div>
+      </div>
+    );
   }
 
   return (

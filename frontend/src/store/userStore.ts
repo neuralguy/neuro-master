@@ -13,18 +13,26 @@ interface UserState {
   reset: () => void;
 }
 
-export const useUserStore = create<UserState>((set) => ({
+export const useUserStore = create<UserState>((set, get) => ({
   user: null,
   isLoading: true,
   error: null,
 
   fetchUser: async () => {
+    // Prevent duplicate calls
+    if (get().user) {
+      set({ isLoading: false });
+      return;
+    }
+    
     set({ isLoading: true, error: null });
     try {
       const user = await userApi.getMe();
       set({ user, isLoading: false });
     } catch (error) {
-      set({ error: (error as Error).message, isLoading: false });
+      const message = (error as Error).message || 'Auth failed';
+      console.error('Failed to fetch user:', message);
+      set({ error: message, isLoading: false });
     }
   },
 
