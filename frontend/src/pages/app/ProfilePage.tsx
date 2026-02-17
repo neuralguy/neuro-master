@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
-import { User, Copy, Share2, Gift, Calendar, Hash } from 'lucide-react';
+import { User, Copy, Share2, Gift, Calendar, Hash, Shield } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -12,6 +13,7 @@ import { formatDate, formatTokens } from '@/utils/format';
 
 export const ProfilePage = () => {
   const { user } = useUser();
+  const navigate = useNavigate();
 
   const { data: referralInfo, isLoading } = useQuery({
     queryKey: ['referral-info'],
@@ -75,6 +77,27 @@ export const ProfilePage = () => {
           </div>
         </div>
       </Card>
+
+      {/* Admin Panel Button */}
+      {user?.is_admin && (
+        <Card
+          className="bg-gradient-to-r from-purple-500 to-indigo-600 text-white cursor-pointer active:scale-[0.98] transition-transform"
+          onClick={() => {
+            hapticFeedback.medium();
+            navigate('/admin');
+          }}
+        >
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+              <Shield className="w-6 h-6" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-semibold text-lg">Админ-панель</h3>
+              <p className="text-sm text-white/70">Управление приложением</p>
+            </div>
+          </div>
+        </Card>
+      )}
 
       {/* User Info */}
       <Card>
