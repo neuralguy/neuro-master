@@ -56,40 +56,31 @@ class GenerationService:
     ) -> Generation:
         """
         Create and start a new generation task.
-        
-        Args:
-            user_id: User ID
-            model_code: AI model code
-            prompt: Text prompt
-            image_url: Input image URL (for img2img or faceswap)
-            aspect_ratio: Output aspect ratio
-            duration: Video duration in seconds
-            extra_params: Additional model-specific parameters
         """
         # Get model
         model = await self.model_repo.get_by_code(model_code)
         if not model:
             raise NotFoundError("Модель", model_code)
-        
+
         if not model.is_enabled:
             raise ValidationError("Эта модель временно недоступна")
-        
+
         # Check user balance
         user = await self.user_repo.get_by_id(user_id)
         if not user:
             raise NotFoundError("Пользователь", user_id)
-        
+
         if user.balance < model.price_tokens:
             raise InsufficientBalanceError(
                 required=model.price_tokens,
                 available=user.balance,
             )
-        
+
         # Deduct tokens
         new_balance = await self.user_repo.update_balance(
             user_id, -model.price_tokens
         )
-        
+
         # Create generation record
         generation = await self.generation_repo.create(
             user_id=user_id,
@@ -102,10 +93,11 @@ class GenerationService:
                 "aspect_ratio": aspect_ratio,
                 "duration": duration,
                 "_provider": model.provider,
+                "_provider_model": model.provider_model,
                 **(extra_params or {}),
             },
         )
-        
+
         # Record balance change
         await self.balance_history_repo.create(
             user_id=user_id,
@@ -115,26 +107,33 @@ class GenerationService:
             description=f"Генерация: {model.name}",
             reference_id=str(generation.id),
         )
-        
+
         # Start generation task in background
         asyncio.create_task(
-            self._process_generation(generation, model.provider_model)
+            self._process_generation(generation, model.provider_model, model.provider)
         )
-        
+
         logger.info(
             f"Generation started | id={generation.id}, model={model_code}, "
-            f"user_id={user_id}, tokens={model.price_tokens}"
+            f"provider={model.provider}, user_id={user_id}, tokens={model.price_tokens}"
         )
-        
+
         return generation
 
     async def _process_generation(
         self,
         generation: Generation,
         provider_model: str,
+        provider_name: str,
     ) -> None:
         """Process generation in background."""
         try:
+            # Determine output format
+            if generation.generation_type == GenerationType.VIDEO:
+                output_format = "mp4"
+            else:
+                output_format = "png"
+
             # Build request
             request = GenerationRequest(
                 model=provider_model,
@@ -142,16 +141,24 @@ class GenerationService:
                 image_url=generation.input_file_url,
                 aspect_ratio=generation.params.get("aspect_ratio", "1:1"),
                 duration=generation.params.get("duration"),
-                output_format="png" if generation.generation_type == GenerationType.IMAGE else "mp4",
-                extra_params=generation.params,
+                output_format=output_format,
+                extra_params={
+                    k: v for k, v in generation.params.items()
+                    if not k.startswith("_")
+                },
             )
-            
-            # Select provider based on model
-            provider = self._get_provider(generation.params.get("_provider", "kie.ai"))
-            
+
+            # Select provider
+            provider = self._get_provider(provider_name)
+
+            logger.debug(
+                f"Submitting to provider | provider={provider_name}, "
+                f"model={provider_model}, generation_id={generation.id}"
+            )
+
             # Create task on provider
             task = await provider.create_task(request)
-            
+
             # Update generation with task ID
             async with self.session.begin_nested():
                 await self.generation_repo.set_processing(
@@ -159,10 +166,14 @@ class GenerationService:
                     task.task_id,
                 )
             await self.session.commit()
-            
+
             # Poll for completion
-            await self._poll_generation(generation.id, task.task_id, provider_name=generation.params.get("_provider", "kie.ai"))
-            
+            await self._poll_generation(
+                generation.id,
+                task.task_id,
+                provider_name=provider_name,
+            )
+
         except Exception as e:
             logger.exception(f"Generation processing failed | id={generation.id}, error={e}")
             async with self.session.begin_nested():
@@ -171,7 +182,7 @@ class GenerationService:
                     error_message=str(e),
                 )
             await self.session.commit()
-            
+
             # Refund tokens
             await self._refund_tokens(generation)
 
@@ -185,27 +196,43 @@ class GenerationService:
     ) -> None:
         """Poll for generation completion."""
         provider = self._get_provider(provider_name)
-        
+
         for attempt in range(max_attempts):
             await asyncio.sleep(interval)
-            
+
             try:
                 task = await provider.get_task_status(task_id)
-                
+
                 if task.status == "success":
+                    if not task.result_url:
+                        logger.error(
+                            f"Generation success but no result_url | "
+                            f"id={generation_id}, task_id={task_id}, provider={provider_name}"
+                        )
+                        async with self.session.begin_nested():
+                            await self.generation_repo.set_failed(
+                                generation_id,
+                                error_message="Провайдер вернул success, но без URL результата",
+                            )
+                        await self.session.commit()
+                        generation = await self.generation_repo.get_by_id(generation_id)
+                        if generation:
+                            await self._refund_tokens(generation)
+                        return
+
                     # Download and save result
                     file_path = await self._download_result(
                         generation_id,
                         task.result_url,
                     )
-                    
+
                     async with self.session.begin_nested():
                         await self.generation_repo.set_success(
                             generation_id,
                             result_url=task.result_url,
                             result_file_path=file_path,
                         )
-                        
+
                         # Add to gallery
                         generation = await self.generation_repo.get_by_id(generation_id)
                         if generation:
@@ -215,12 +242,12 @@ class GenerationService:
                                 file_path=file_path,
                                 file_type="video" if generation.generation_type == GenerationType.VIDEO else "image",
                             )
-                    
+
                     await self.session.commit()
-                    
-                    logger.info(f"Generation completed | id={generation_id}")
+
+                    logger.info(f"Generation completed | id={generation_id}, provider={provider_name}")
                     return
-                
+
                 elif task.status == "failed":
                     async with self.session.begin_nested():
                         await self.generation_repo.set_failed(
@@ -228,23 +255,28 @@ class GenerationService:
                             error_message=task.error or "Unknown error",
                         )
                     await self.session.commit()
-                    
+
                     # Refund tokens
                     generation = await self.generation_repo.get_by_id(generation_id)
                     if generation:
                         await self._refund_tokens(generation)
-                    
+
                     return
-                
+
                 # Still processing, continue polling
-                logger.debug(
-                    f"Generation polling | id={generation_id}, "
-                    f"attempt={attempt + 1}, status={task.status}"
-                )
-                
+                if attempt % 10 == 0:  # Log every 10th attempt to reduce noise
+                    logger.debug(
+                        f"Generation polling | id={generation_id}, "
+                        f"attempt={attempt + 1}/{max_attempts}, status={task.status}, "
+                        f"provider={provider_name}"
+                    )
+
             except Exception as e:
-                logger.error(f"Polling error | id={generation_id}, error={e}")
-        
+                logger.error(
+                    f"Polling error | id={generation_id}, attempt={attempt + 1}, "
+                    f"provider={provider_name}, error={e}"
+                )
+
         # Max attempts reached
         async with self.session.begin_nested():
             await self.generation_repo.set_failed(
@@ -252,7 +284,7 @@ class GenerationService:
                 error_message="Timeout: превышено время ожидания",
             )
         await self.session.commit()
-        
+
         generation = await self.generation_repo.get_by_id(generation_id)
         if generation:
             await self._refund_tokens(generation)
@@ -263,30 +295,46 @@ class GenerationService:
         url: str,
     ) -> str:
         """Download result file from URL."""
-        
+
         # Determine file extension from URL
+        url_lower = url.lower().split("?")[0]  # strip query params
         ext = ".png"
-        if ".mp4" in url or "video" in url:
+        if url_lower.endswith(".mp4") or "video" in url_lower:
             ext = ".mp4"
-        elif ".webp" in url:
+        elif url_lower.endswith(".webp"):
             ext = ".webp"
-        elif ".jpg" in url or ".jpeg" in url:
+        elif url_lower.endswith(".jpg") or url_lower.endswith(".jpeg"):
             ext = ".jpg"
-        
+        elif url_lower.endswith(".gif"):
+            ext = ".gif"
+        elif url_lower.endswith(".webm"):
+            ext = ".webm"
+
         # Create file path
         file_name = f"{generation_id}{ext}"
         file_path = STORAGE_DIR / "generations" / file_name
-        
+
         # Download file
-        async with httpx.AsyncClient(timeout=120.0) as client:
+        async with httpx.AsyncClient(timeout=120.0, follow_redirects=True) as client:
             response = await client.get(url)
             response.raise_for_status()
-            
+
+            # Try to detect content type from response headers
+            content_type = response.headers.get("content-type", "")
+            if ext == ".png" and "video" in content_type:
+                ext = ".mp4"
+                file_name = f"{generation_id}{ext}"
+                file_path = STORAGE_DIR / "generations" / file_name
+            elif ext == ".png" and "jpeg" in content_type:
+                ext = ".jpg"
+                file_name = f"{generation_id}{ext}"
+                file_path = STORAGE_DIR / "generations" / file_name
+
             file_path.parent.mkdir(parents=True, exist_ok=True)
             file_path.write_bytes(response.content)
-        
-        logger.debug(f"Result downloaded | id={generation_id}, path={file_path}")
-        
+
+        logger.debug(f"Result downloaded | id={generation_id}, path={file_path}, size={len(response.content)}")
+
         return str(file_path)
 
     async def _refund_tokens(self, generation: Generation) -> None:
@@ -296,7 +344,7 @@ class GenerationService:
                 generation.user_id,
                 generation.tokens_spent,
             )
-            
+
             await self.balance_history_repo.create(
                 user_id=generation.user_id,
                 amount=generation.tokens_spent,
@@ -305,14 +353,14 @@ class GenerationService:
                 description="Возврат за неудачную генерацию",
                 reference_id=str(generation.id),
             )
-            
+
             await self.session.commit()
-            
+
             logger.info(
                 f"Tokens refunded | user_id={generation.user_id}, "
                 f"amount={generation.tokens_spent}"
             )
-            
+
         except Exception as e:
             logger.error(f"Refund failed | generation_id={generation.id}, error={e}")
 
@@ -338,3 +386,4 @@ class GenerationService:
     async def get_stats(self) -> dict:
         """Get generation statistics."""
         return await self.generation_repo.get_stats()
+
