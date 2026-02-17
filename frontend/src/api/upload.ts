@@ -3,6 +3,7 @@ import apiClient from './client';
 export interface UploadResponse {
   url: string;
   filename: string;
+  file_type: string; // "image" | "video"
 }
 
 export const uploadApi = {

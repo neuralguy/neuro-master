@@ -56,6 +56,7 @@ async def create_generation(
             model_code=request.model_code,
             prompt=request.prompt,
             image_url=request.image_url,
+            video_url=request.video_url,  # NEW
             aspect_ratio=request.aspect_ratio,
             duration=request.duration,
             extra_params=request.extra_params,
@@ -171,3 +172,4 @@ async def get_generations(
         ],
         total=total,
     )
+

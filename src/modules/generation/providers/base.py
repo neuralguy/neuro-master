@@ -1,7 +1,7 @@
 """Base provider interface."""
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 
@@ -22,6 +22,8 @@ class GenerationRequest:
     prompt: str | None = None
     image_url: str | None = None
     image_urls: list[str] | None = None
+    video_url: str | None = None       # NEW: for motion control
+    video_urls: list[str] | None = None # NEW: for motion control
     aspect_ratio: str = "1:1"
     duration: int | None = None
     output_format: str = "png"
@@ -45,3 +47,4 @@ class BaseGenerationProvider(ABC):
     async def cancel_task(self, task_id: str) -> bool:
         """Cancel a generation task."""
         pass
+

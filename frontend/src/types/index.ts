@@ -40,7 +40,9 @@ export interface AIModelConfig {
   supports_audio?: boolean;
   requires_source_image?: boolean;
   requires_target_image?: boolean;
-  mode?: 'text-to-image' | 'image-to-image' | 'text-to-video' | 'image-to-video';
+  requires_image?: boolean;    // NEW: motion control
+  requires_video?: boolean;    // NEW: motion control
+  mode?: 'text-to-image' | 'image-to-image' | 'text-to-video' | 'image-to-video' | 'motion-control';
   quality?: string;
   resolution?: string;
 }
@@ -86,6 +88,7 @@ export interface GenerationCreateRequest {
   model_code: string;
   prompt?: string;
   image_url?: string;
+  video_url?: string;      // NEW: for motion control
   aspect_ratio?: string;
   duration?: number;
   extra_params?: Record<string, any>;

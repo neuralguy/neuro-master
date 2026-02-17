@@ -50,6 +50,7 @@ class GenerationService:
         model_code: str,
         prompt: str | None = None,
         image_url: str | None = None,
+        video_url: str | None = None,
         aspect_ratio: str = "1:1",
         duration: int | None = None,
         extra_params: dict | None = None,
@@ -64,6 +65,14 @@ class GenerationService:
 
         if not model.is_enabled:
             raise ValidationError("Эта модель временно недоступна")
+
+        # Validate motion control requirements
+        model_mode = model.config.get("mode", "")
+        if model_mode == "motion-control":
+            if not image_url:
+                raise ValidationError("Для motion control необходимо загрузить изображение")
+            if not video_url:
+                raise ValidationError("Для motion control необходимо загрузить референсное видео")
 
         # Check user balance
         user = await self.user_repo.get_by_id(user_id)
@@ -92,6 +101,7 @@ class GenerationService:
             params={
                 "aspect_ratio": aspect_ratio,
                 "duration": duration,
+                "video_url": video_url,
                 "_provider": model.provider,
                 "_provider_model": model.provider_model,
                 **(extra_params or {}),
@@ -135,16 +145,19 @@ class GenerationService:
                 output_format = "png"
 
             # Build request
+            video_url = generation.params.get("video_url")
+
             request = GenerationRequest(
                 model=provider_model,
                 prompt=generation.prompt,
                 image_url=generation.input_file_url,
+                video_url=video_url,
                 aspect_ratio=generation.params.get("aspect_ratio", "1:1"),
                 duration=generation.params.get("duration"),
                 output_format=output_format,
                 extra_params={
                     k: v for k, v in generation.params.items()
-                    if not k.startswith("_")
+                    if not k.startswith("_") and k != "video_url"
                 },
             )
 
@@ -264,7 +277,7 @@ class GenerationService:
                     return
 
                 # Still processing, continue polling
-                if attempt % 10 == 0:  # Log every 10th attempt to reduce noise
+                if attempt % 10 == 0:
                     logger.debug(
                         f"Generation polling | id={generation_id}, "
                         f"attempt={attempt + 1}/{max_attempts}, status={task.status}, "
@@ -296,8 +309,7 @@ class GenerationService:
     ) -> str:
         """Download result file from URL."""
 
-        # Determine file extension from URL
-        url_lower = url.lower().split("?")[0]  # strip query params
+        url_lower = url.lower().split("?")[0]
         ext = ".png"
         if url_lower.endswith(".mp4") or "video" in url_lower:
             ext = ".mp4"
@@ -310,16 +322,13 @@ class GenerationService:
         elif url_lower.endswith(".webm"):
             ext = ".webm"
 
-        # Create file path
         file_name = f"{generation_id}{ext}"
         file_path = STORAGE_DIR / "generations" / file_name
 
-        # Download file
         async with httpx.AsyncClient(timeout=120.0, follow_redirects=True) as client:
             response = await client.get(url)
             response.raise_for_status()
 
-            # Try to detect content type from response headers
             content_type = response.headers.get("content-type", "")
             if ext == ".png" and "video" in content_type:
                 ext = ".mp4"

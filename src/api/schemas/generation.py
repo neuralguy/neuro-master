@@ -11,6 +11,7 @@ class GenerationCreateRequest(BaseModel):
     model_code: str
     prompt: str | None = None
     image_url: str | None = None
+    video_url: str | None = None  # NEW: для motion control
     aspect_ratio: str = "1:1"
     duration: int | None = None
     extra_params: dict | None = None
@@ -49,3 +50,4 @@ class GenerationStatusResponse(BaseModel):
     result_file_url: str | None = None
     error_message: str | None = None
     progress: int | None = None
+

@@ -516,6 +516,21 @@ DEFAULT_MODELS = [
         "icon": "🛫",
         "config": {"aspect_ratios": ["16:9", "9:16", "1:1", "4:3", "3:4"], "durations": ["5", "10"], "mode": "image-to-video"},
     },
+    {
+        "code": "kling-2.6-motion-control",
+        "name": "Kling 2.6 Motion Control",
+        "description": "Перенос движения с видео на изображение — танцы, жесты, движения",
+        "provider": "kie.ai",
+        "provider_model": "kling-2.6/motion-control",
+        "generation_type": "video",
+        "price_tokens": 50,
+        "icon": "🕺",
+        "config": {
+            "mode": "motion-control",
+            "requires_image": True,
+            "requires_video": True,
+        },
+    },
 ]
 
 
