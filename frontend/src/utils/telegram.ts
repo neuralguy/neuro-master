@@ -1,19 +1,3 @@
-// Cached token auth params (saved on first load, before router changes URL)
-let _cachedTokenAuth: { uid: string; token: string } | null = null;
-
-export function initTokenAuth(): void {
-  const params = new URLSearchParams(window.location.search);
-  const uid = params.get('uid');
-  const token = params.get('token');
-  if (uid && token) {
-    _cachedTokenAuth = { uid, token };
-  }
-}
-
-export function getTokenAuth(): { uid: string; token: string } | null {
-  return _cachedTokenAuth;
-}
-
 // Telegram WebApp types
 declare global {
   interface Window {
@@ -100,6 +84,42 @@ export interface TelegramWebApp {
   }, callback?: (buttonId: string) => void) => void;
 }
 
+// ============================================================
+// Token auth cache — saved ONCE before React Router changes URL
+// ============================================================
+let _cachedTokenAuth: { uid: string; token: string } | null = null;
+let _tokenAuthInitialized = false;
+
+/**
+ * Must be called ONCE at app startup, BEFORE BrowserRouter mounts,
+ * because the router will strip query params from the URL.
+ */
+export function initTokenAuth(): void {
+  if (_tokenAuthInitialized) return;
+  _tokenAuthInitialized = true;
+
+  const params = new URLSearchParams(window.location.search);
+  const uid = params.get('uid');
+  const token = params.get('token');
+  if (uid && token) {
+    _cachedTokenAuth = { uid, token };
+    console.log('[auth] Token auth cached from URL', { uid, tokenLen: token.length });
+  } else {
+    console.log('[auth] No token auth params in URL');
+  }
+}
+
+/**
+ * Returns cached token auth, or null.
+ */
+export function getTokenAuth(): { uid: string; token: string } | null {
+  return _cachedTokenAuth;
+}
+
+// ============================================================
+// Telegram WebApp helpers
+// ============================================================
+
 export const getTelegram = (): TelegramWebApp | null => {
   return window.Telegram?.WebApp || null;
 };
@@ -142,3 +162,4 @@ export const showConfirm = (message: string): Promise<boolean> => {
     }
   });
 };
+

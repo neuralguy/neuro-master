@@ -28,7 +28,10 @@ export const useTelegram = () => {
       );
     }
 
-    // Ready if we have initData OR token auth OR running in dev mode (outside TG)
+    // App is ready if we have ANY form of auth:
+    // - initData (inline/menu button)
+    // - token auth (reply keyboard button)
+    // - neither (dev mode, outside Telegram)
     setIsReady(true);
   }, []);
 
@@ -41,3 +44,4 @@ export const useTelegram = () => {
     hasTokenAuth: !!getTokenAuth(),
   };
 };
+

@@ -16,10 +16,10 @@ apiClient.interceptors.request.use((config) => {
   const initData = getInitData();
   
   if (initData) {
-    // Method 1: initData from inline button / menu button
+    // Method 1: initData from inline button / menu button (not empty)
     config.headers['X-Telegram-Init-Data'] = initData;
   } else {
-    // Method 2: token from reply keyboard button URL (cached at startup)
+    // Method 2: token auth from reply keyboard button URL (cached at startup)
     const tokenAuth = getTokenAuth();
     if (tokenAuth) {
       config.headers['X-Telegram-Id'] = tokenAuth.uid;
@@ -35,7 +35,7 @@ apiClient.interceptors.response.use(
   (response) => response,
   (error: AxiosError<{ detail: string }>) => {
     const message = error.response?.data?.detail || error.message || 'Произошла ошибка';
-    console.error('API Error:', message);
+    console.error('API Error:', message, error.response?.status);
     return Promise.reject(new Error(message));
   }
 );

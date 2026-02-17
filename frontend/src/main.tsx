@@ -3,7 +3,8 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import './index.css';
 
-// IMPORTANT: Cache token auth params BEFORE React Router changes the URL
+// CRITICAL: Cache uid/token from URL BEFORE React Router mounts
+// and changes the URL (losing query params).
 import { initTokenAuth } from '@/utils/telegram';
 initTokenAuth();
 
@@ -12,3 +13,4 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <App />
   </React.StrictMode>
 );
+

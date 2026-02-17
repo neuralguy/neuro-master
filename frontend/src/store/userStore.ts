@@ -7,7 +7,6 @@ interface UserState {
   isLoading: boolean;
   error: string | null;
   
-  // Actions
   fetchUser: () => Promise<void>;
   updateBalance: (balance: number) => void;
   reset: () => void;
@@ -19,7 +18,6 @@ export const useUserStore = create<UserState>((set, get) => ({
   error: null,
 
   fetchUser: async () => {
-    // Prevent duplicate calls
     if (get().user) {
       set({ isLoading: false });
       return;
@@ -27,11 +25,13 @@ export const useUserStore = create<UserState>((set, get) => ({
     
     set({ isLoading: true, error: null });
     try {
+      console.log('[userStore] Fetching user...');
       const user = await userApi.getMe();
+      console.log('[userStore] User fetched:', user.telegram_id);
       set({ user, isLoading: false });
     } catch (error) {
       const message = (error as Error).message || 'Auth failed';
-      console.error('Failed to fetch user:', message);
+      console.error('[userStore] fetchUser failed:', message);
       set({ error: message, isLoading: false });
     }
   },
@@ -46,3 +46,4 @@ export const useUserStore = create<UserState>((set, get) => ({
     set({ user: null, isLoading: false, error: null });
   },
 }));
+

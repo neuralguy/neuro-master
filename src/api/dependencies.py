@@ -2,7 +2,7 @@
 
 from typing import Annotated
 
-from fastapi import Depends, Header, HTTPException, Query, status
+from fastapi import Depends, Header, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.database import async_session_maker
@@ -40,7 +40,7 @@ async def get_current_user(
     2. Token auth (reply keyboard button)
     """
     
-    # Method 1: initData
+    # Method 1: initData (non-empty string)
     if x_telegram_init_data:
         try:
             data = validate_telegram_webapp_data(x_telegram_init_data)
@@ -62,6 +62,7 @@ async def get_current_user(
                     detail="User is banned",
                 )
             
+            logger.debug(f"Auth via initData | telegram_id={telegram_id}")
             return user
             
         except HTTPException:
@@ -73,17 +74,24 @@ async def get_current_user(
                 detail=f"Invalid init data: {e}",
             )
     
-    # Method 2: Token
+    # Method 2: Token auth
     if x_telegram_id and x_telegram_token:
+        logger.debug(
+            f"Token auth attempt | telegram_id={x_telegram_id}, "
+            f"token_len={len(x_telegram_token)}, token_preview={x_telegram_token[:20]}..."
+        )
+        
         try:
             telegram_id = int(x_telegram_id)
         except ValueError:
+            logger.warning(f"Token auth: invalid telegram_id={x_telegram_id}")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid telegram_id",
             )
         
         if not validate_webapp_token(telegram_id, x_telegram_token):
+            logger.warning(f"Token auth: invalid token | telegram_id={telegram_id}")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid or expired token",
@@ -95,9 +103,10 @@ async def get_current_user(
         user = await user_service.user_repo.get_by_telegram_id(telegram_id)
         
         if not user:
+            logger.warning(f"Token auth: user not found | telegram_id={telegram_id}")
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found",
+                detail="User not found. Please /start the bot first.",
             )
         
         if user.is_banned:
@@ -106,11 +115,18 @@ async def get_current_user(
                 detail="User is banned",
             )
         
+        logger.debug(f"Auth via token | telegram_id={telegram_id}")
         return user
     
+    # No auth at all
+    logger.warning(
+        f"No auth data | init_data={'yes' if x_telegram_init_data else 'no'}, "
+        f"tg_id={'yes' if x_telegram_id else 'no'}, "
+        f"tg_token={'yes' if x_telegram_token else 'no'}"
+    )
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Missing auth data",
+        detail="Missing auth data. Open the app from the Telegram bot.",
     )
 
 
