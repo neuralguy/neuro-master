@@ -1,12 +1,11 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { clsx } from 'clsx';
-import { LayoutDashboard, Users, CreditCard, Bot, ScrollText, ArrowLeft } from 'lucide-react';
+import { LayoutDashboard, Users, Bot, ArrowLeft } from 'lucide-react';
 
 const adminNavItems = [
   { to: '/admin', icon: LayoutDashboard, label: 'Дашборд', end: true },
   { to: '/admin/users', icon: Users, label: 'Пользователи' },
   { to: '/admin/models', icon: Bot, label: 'Модели' },
-  { to: '/admin/logs', icon: ScrollText, label: 'Логи' },
 ];
 
 export const AdminLayout = () => {
@@ -58,3 +57,4 @@ export const AdminLayout = () => {
     </div>
   );
 };
+

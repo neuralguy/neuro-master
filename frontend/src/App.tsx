@@ -14,7 +14,6 @@ import { ProfilePage } from '@/pages/app/ProfilePage';
 import { DashboardPage } from '@/pages/admin/DashboardPage';
 import { UsersPage } from '@/pages/admin/UsersPage';
 import { ModelsPage } from '@/pages/admin/ModelsPage';
-import { LogsPage } from '@/pages/admin/LogsPage';
 
 import { useTelegram } from '@/hooks/useTelegram';
 import { useUser } from '@/hooks/useUser';
@@ -88,7 +87,6 @@ const AppContent = () => {
           <Route index element={<DashboardPage />} />
           <Route path="users" element={<UsersPage />} />
           <Route path="models" element={<ModelsPage />} />
-          <Route path="logs" element={<LogsPage />} />
         </Route>
       )}
 
