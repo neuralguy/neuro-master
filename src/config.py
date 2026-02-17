@@ -49,8 +49,8 @@ class Settings(BaseSettings):
 
     # === Application ===
     SECRET_KEY: SecretStr = Field(default="change-me-in-production-min-32-chars")
-    WELCOME_BONUS: int = Field(default=50)
-    REFERRAL_BONUS: int = Field(default=50)
+    WELCOME_BONUS: int = Field(default=15)
+    REFERRAL_BONUS: int = Field(default=15)
 
     # === Logging ===
     LOG_LEVEL: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = Field(default="DEBUG")

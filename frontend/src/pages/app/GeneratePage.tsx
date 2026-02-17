@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { useSearchParams } from 'react-router-dom';
-import { Upload, X, ChevronDown, ImageIcon, VideoIcon, Paperclip, Loader2 } from 'lucide-react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
+import { Upload, X, ChevronDown, ImageIcon, VideoIcon, Paperclip, Loader2, Gift, Users } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { Card } from '@/components/ui/Card';
 import { modelsApi } from '@/api/models';
 import { generationApi } from '@/api/generation';
 import { uploadApi } from '@/api/upload';
@@ -13,6 +14,7 @@ import type { AIModel, GenerationType, AIModelsGrouped } from '@/types';
 export default function GeneratePage() {
   const { user, updateBalance } = useUser();
   const { tg } = useTelegram();
+  const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [searchParams] = useSearchParams();
 
@@ -212,7 +214,7 @@ export default function GeneratePage() {
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 p-4">
       {/* Табы Фото/Видео */}
       <div className="bg-gray-100 dark:bg-gray-800 p-1.5 rounded-2xl flex gap-1">
         <button
@@ -393,6 +395,27 @@ export default function GeneratePage() {
       >
         {generation.isPending ? 'Генерация...' : 'Сгенерировать'}
       </Button>
+
+      {/* Блок приглашения друзей */}
+      <Card
+        className="bg-gradient-to-r from-green-500 to-emerald-500 text-white cursor-pointer active:scale-[0.98] transition-transform"
+        onClick={() => navigate('/profile')}
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center flex-shrink-0">
+            <Gift className="w-6 h-6" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h3 className="font-semibold text-base">Приглашай друзей</h3>
+            <p className="text-sm text-white/80">
+              Получай <span className="font-bold text-white">15</span> токенов за каждого
+            </p>
+          </div>
+          <button className="px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-xl text-sm font-medium transition-colors flex-shrink-0">
+            Подробнее
+          </button>
+        </div>
+      </Card>
     </div>
   );
 }

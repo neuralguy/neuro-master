@@ -31,7 +31,7 @@ export const ProfilePage = () => {
       const tg = getTelegram();
       if (tg) {
         tg.openTelegramLink(
-          `https://t.me/share/url?url=${encodeURIComponent(referralInfo.referral_link)}&text=${encodeURIComponent('🎁 Присоединяйся! Получи 50 бесплатных токенов для генерации AI контента!')}`
+          `https://t.me/share/url?url=${encodeURIComponent(referralInfo.referral_link)}&text=${encodeURIComponent('🎁 Присоединяйся! Получи 15 бесплатных токенов для генерации AI контента!')}`
         );
       }
       hapticFeedback.medium();
@@ -107,11 +107,26 @@ export const ProfilePage = () => {
             <Gift className="w-6 h-6" />
           </div>
           <div>
-            <h2 className="text-lg font-semibold">Пригласи друга</h2>
+            <h2 className="text-lg font-semibold">Приглашай друзей</h2>
             <p className="text-sm text-white/80">
-              Получи 50 токенов за каждого
+              Получай <span className="font-bold text-white">15</span> токенов за каждого
             </p>
           </div>
+        </div>
+
+        {/* Описание */}
+        <div className="bg-white/10 rounded-xl p-3 mb-4 text-sm text-white/90 leading-relaxed">
+          <p className="font-semibold text-white mb-1">✨ Делитесь доступом — получайте доход</p>
+          <p>
+            Приглашайте друзей и получайте 15 токенов за каждого, кто присоединится по вашей ссылке.
+          </p>
+          <p className="mt-2">
+            Ваши друзья получают также 15 токенов и инструмент для создания сильного визуала,
+            а вы — токены, которые можно инвестировать в генерацию эффектных фото и видео.
+          </p>
+          <p className="mt-2 font-medium text-white">
+            Это не просто приглашение — это способ монетизировать своё окружение и усиливать свой контент.
+          </p>
         </div>
 
         <div className="bg-white/10 rounded-xl p-3 mb-4">
@@ -151,3 +166,4 @@ export const ProfilePage = () => {
     </div>
   );
 };
+
