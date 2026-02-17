@@ -1,3 +1,5 @@
+// frontend/src/pages/app/GeneratePage.tsx
+
 import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useSearchParams, useNavigate } from 'react-router-dom';
@@ -570,22 +572,25 @@ export default function GeneratePage() {
         {generation.isPending ? 'Генерация...' : 'Сгенерировать'}
       </Button>
 
-      {/* Блок приглашения друзей */}
+      {/* Блок приглашения друзей — увеличенный */}
       <Card
-        className="bg-gradient-to-r from-green-500 to-emerald-500 text-white cursor-pointer active:scale-[0.98] transition-transform"
+        className="bg-gradient-to-br from-green-500 via-emerald-500 to-teal-600 text-white cursor-pointer active:scale-[0.98] transition-transform mt-2"
         onClick={() => navigate('/profile')}
       >
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center flex-shrink-0">
-            <Gift className="w-6 h-6" />
+        <div className="flex items-center gap-4 py-4">
+          <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center flex-shrink-0">
+            <Gift className="w-8 h-8" />
           </div>
           <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-base">Приглашай друзей</h3>
-            <p className="text-sm text-white/80">
-              Получай <span className="font-bold text-white">15</span> токенов за каждого
+            <h3 className="font-bold text-lg leading-tight">Приглашай друзей</h3>
+            <p className="text-sm text-white/80 mt-1">
+              Получай <span className="font-bold text-white">15</span> токенов за каждого друга
+            </p>
+            <p className="text-xs text-white/60 mt-1">
+              Друзья тоже получат 15 токенов при регистрации
             </p>
           </div>
-          <button className="px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-xl text-sm font-medium transition-colors flex-shrink-0">
+          <button className="px-4 py-2.5 bg-white/20 hover:bg-white/30 rounded-xl text-sm font-semibold transition-colors flex-shrink-0">
             Подробнее
           </button>
         </div>
