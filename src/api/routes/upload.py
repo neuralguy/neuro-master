@@ -19,7 +19,7 @@ UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
 ALLOWED_VIDEO_TYPES = {"video/mp4", "video/quicktime", "video/webm", "video/x-msvideo"}
 ALLOWED_TYPES = ALLOWED_IMAGE_TYPES | ALLOWED_VIDEO_TYPES
-MAX_FILE_SIZE = 100 * 1024 * 1024  # 50MB (видео может быть больше)
+MAX_FILE_SIZE = 200 * 1024 * 1024  # 200MB (видео может быть больше)
 MAX_IMAGE_SIZE = 10 * 1024 * 1024  # 10MB
 
 
