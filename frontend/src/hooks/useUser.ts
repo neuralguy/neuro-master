@@ -5,7 +5,7 @@ export const useUser = () => {
   const { user, isLoading, error, fetchUser, updateBalance } = useUserStore();
 
   useEffect(() => {
-    if (!user && !isLoading) {
+    if (!user && !isLoading && !error) {
       fetchUser();
     }
   }, []);

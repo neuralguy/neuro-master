@@ -14,15 +14,14 @@ interface UserState {
 
 export const useUserStore = create<UserState>((set, get) => ({
   user: null,
-  isLoading: true,
+  isLoading: false,
   error: null,
 
   fetchUser: async () => {
-    if (get().user) {
-      set({ isLoading: false });
+    if (get().user || get().isLoading) {
       return;
     }
-    
+
     set({ isLoading: true, error: null });
     try {
       console.log('[userStore] Fetching user...');
