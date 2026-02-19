@@ -1,6 +1,6 @@
 // frontend/src/pages/app/GeneratePage.tsx
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Upload, X, ChevronDown, ImageIcon, VideoIcon, Paperclip, Loader2, Gift, Users, Film } from 'lucide-react';
@@ -55,7 +55,7 @@ export default function GeneratePage() {
   const isMotionControl = selectedModel?.config?.mode === 'motion-control';
 
   // Фильтрация моделей по типу и наличию фото
-  const currentModels = (() => {
+  const currentModels = useMemo(() => {
     if (!modelsGrouped) return [];
 
     if (activeType === 'video') {
@@ -105,23 +105,30 @@ export default function GeneratePage() {
     }
 
     return [];
-  })();
+  }, [modelsGrouped, activeType, hasImage, hasVideo]);
 
   // Автовыбор модели при смене списка
   useEffect(() => {
-    if (currentModels.length > 0) {
-      const exists = selectedModel && currentModels.find(m => m.id === selectedModel.id);
-      if (!exists) {
-        // Если была выбрана motion-control — попробуем найти её в новом списке по режиму
-        const motionModel = selectedModel?.config?.mode === 'motion-control'
-          ? currentModels.find(m => m.config?.mode === 'motion-control')
-          : null;
-        setSelectedModel(motionModel || currentModels[0]);
-      }
-    } else {
+    if (currentModels.length === 0) {
       setSelectedModel(null);
+      return;
     }
-  }, [currentModels.length, hasImage, hasVideo, activeType]);
+    // Если текущая выбранная модель есть в новом списке — не трогаем
+    const stillExists = selectedModel && currentModels.find(m => m.id === selectedModel.id);
+    if (stillExists) return;
+
+    // Если была выбрана motion-control — ищем её в новом списке по режиму
+    if (selectedModel?.config?.mode === 'motion-control') {
+      const motionModel = currentModels.find(m => m.config?.mode === 'motion-control');
+      if (motionModel) {
+        setSelectedModel(motionModel);
+        return;
+      }
+    }
+
+    // Иначе выбираем первую
+    setSelectedModel(currentModels[0]);
+  }, [currentModels, activeType]);
 
   // Сброс aspect ratio при смене модели
   useEffect(() => {
