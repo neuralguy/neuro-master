@@ -59,8 +59,10 @@ class PaymentService:
             tuple of (Payment, payment_url)
         """
         # Find offer_id for this package
+        from src.shared.constants import PAYMENT_PACKAGES_USD, PAYMENT_PACKAGES_RUB
+        all_packages = PAYMENT_PACKAGES_RUB if (currency or self.lava_currency) == "RUB" else PAYMENT_PACKAGES_USD
         package = next(
-            (pkg for pkg in PAYMENT_PACKAGES
+            (pkg for pkg in all_packages
              if pkg["name"] == package_name and pkg["amount"] == amount),
             None,
         )
