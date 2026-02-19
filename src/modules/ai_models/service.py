@@ -56,7 +56,7 @@ class AIModelService:
         name: str,
         provider_model: str,
         generation_type: GenerationType,
-        price_tokens: int = 10,
+        price_tokens: float = 10.0,
         description: str | None = None,
         config: dict | None = None,
         icon: str | None = None,
@@ -93,10 +93,10 @@ class AIModelService:
         await self.repo.set_enabled(model_id, new_status)
         return new_status
 
-    async def set_price(self, model_id: int, price_tokens: int) -> None:
+    async def set_price(self, model_id: int, price_tokens: float) -> None:
         """Set model price."""
-        if price_tokens < 1:
-            raise ValidationError("Цена должна быть минимум 1 токен")
+        if price_tokens <= 0:
+            raise ValidationError("Цена должна быть больше 0")
 
         await self.get_model(model_id)
         await self.repo.update_price(model_id, price_tokens)
@@ -134,13 +134,11 @@ class AIModelService:
 #
 
 DEFAULT_MODELS = [
-    # =============================================
-    # IMAGE: TEXT-TO-IMAGE (all poyo.ai)
-    # =============================================
+    # ==================== IMAGE: Text-to-Image ====================
     {
         "code": "nano-banana",
         "name": "Nano Banana",
-        "description": "Google Gemini — быстрая генерация",
+        "description": "Google Gemini 2.5 Flash — быстрая генерация",
         "provider": "poyo.ai",
         "provider_model": "nano-banana",
         "generation_type": "image",
@@ -151,7 +149,7 @@ DEFAULT_MODELS = [
     {
         "code": "nano-banana-2",
         "name": "Nano Banana Pro",
-        "description": "Google Gemini — улучшенное качество",
+        "description": "Google Gemini 3 Pro — 2K, улучшенное качество",
         "provider": "poyo.ai",
         "provider_model": "nano-banana-2",
         "generation_type": "image",
@@ -162,7 +160,7 @@ DEFAULT_MODELS = [
     {
         "code": "gpt-image-1.5",
         "name": "GPT Image 1.5",
-        "description": "OpenAI GPT Image 1.5",
+        "description": "OpenAI GPT Image 1.5 — высокое качество",
         "provider": "poyo.ai",
         "provider_model": "gpt-image-1.5",
         "generation_type": "image",
@@ -184,7 +182,7 @@ DEFAULT_MODELS = [
     {
         "code": "seedream-4.5",
         "name": "Seedream 4.5",
-        "description": "Seedream 4.5 — высокое качество",
+        "description": "ByteDance Seedream 4.5 — 4K, профессиональное качество",
         "provider": "poyo.ai",
         "provider_model": "seedream-4.5",
         "generation_type": "image",
@@ -195,7 +193,7 @@ DEFAULT_MODELS = [
     {
         "code": "flux-2-pro",
         "name": "Flux 2 Pro",
-        "description": "Black Forest Labs Flux 2 Pro",
+        "description": "Black Forest Labs Flux 2 Pro — фотореализм",
         "provider": "poyo.ai",
         "provider_model": "flux-2-pro",
         "generation_type": "image",
@@ -206,7 +204,7 @@ DEFAULT_MODELS = [
     {
         "code": "flux-2-flex",
         "name": "Flux 2 Flex",
-        "description": "Flux 2 Flex — высокое разрешение",
+        "description": "Flux 2 Flex — гибкое качество/скорость",
         "provider": "poyo.ai",
         "provider_model": "flux-2-flex",
         "generation_type": "image",
@@ -217,18 +215,18 @@ DEFAULT_MODELS = [
     {
         "code": "grok-imagine",
         "name": "Grok Imagine",
-        "description": "xAI Grok — генерация изображений",
+        "description": "xAI Aurora — генерация изображений",
         "provider": "poyo.ai",
         "provider_model": "grok-imagine-image",
         "generation_type": "image",
         "price_tokens": 6,
         "icon": "🚀",
-        "config": {"aspect_ratios": ["1:1", "16:9", "9:16", "4:3", "3:4"], "mode": "text-to-image"},
+        "config": {"aspect_ratios": ["1:1", "16:9", "9:16", "2:3", "3:2"], "mode": "text-to-image"},
     },
     {
         "code": "z-image",
         "name": "Z Image",
-        "description": "Z Image — быстрая генерация",
+        "description": "Alibaba Z-Image — сверхбыстрая генерация",
         "provider": "poyo.ai",
         "provider_model": "z-image",
         "generation_type": "image",
@@ -237,13 +235,11 @@ DEFAULT_MODELS = [
         "config": {"aspect_ratios": ["1:1", "16:9", "9:16", "4:3", "3:4"], "mode": "text-to-image"},
     },
 
-    # =============================================
-    # IMAGE: IMAGE-TO-IMAGE / EDIT (all poyo.ai)
-    # =============================================
+    # ==================== IMAGE: Image-to-Image (edit) ====================
     {
         "code": "nano-banana-edit",
         "name": "Nano Banana",
-        "description": "Google — редактирование изображений",
+        "description": "Google Gemini — редактирование изображений",
         "provider": "poyo.ai",
         "provider_model": "nano-banana-edit",
         "generation_type": "image",
@@ -254,7 +250,7 @@ DEFAULT_MODELS = [
     {
         "code": "nano-banana-2-edit",
         "name": "Nano Banana Pro",
-        "description": "Google — улучшенное редактирование",
+        "description": "Google Gemini 3 Pro — улучшенное редактирование",
         "provider": "poyo.ai",
         "provider_model": "nano-banana-2-edit",
         "generation_type": "image",
@@ -298,7 +294,7 @@ DEFAULT_MODELS = [
     {
         "code": "flux-2-pro-edit",
         "name": "Flux 2 Pro",
-        "description": "Flux 2 Pro — редактирование",
+        "description": "Flux 2 Pro — редактирование с мульти-референсом",
         "provider": "poyo.ai",
         "provider_model": "flux-2-pro-edit",
         "generation_type": "image",
@@ -318,17 +314,13 @@ DEFAULT_MODELS = [
         "config": {"aspect_ratios": ["1:1", "16:9", "9:16"], "mode": "image-to-image"},
     },
 
-    # =============================================
-    # VIDEO: TEXT-TO-VIDEO
-    # =============================================
-
-    # veo3 → poyo.ai
+    # ==================== VIDEO: Text-to-Video ====================
     {
         "code": "veo3-fast",
         "name": "Veo 3.1 Fast",
         "description": "Google Veo 3.1 — быстрая генерация видео со звуком",
         "provider": "poyo.ai",
-        "provider_model": "veo3_fast",
+        "provider_model": "veo3.1-fast",
         "generation_type": "video",
         "price_tokens": 50,
         "icon": "🎬",
@@ -339,77 +331,111 @@ DEFAULT_MODELS = [
         "name": "Veo 3.1 Quality",
         "description": "Google Veo 3.1 — высокое качество видео",
         "provider": "poyo.ai",
-        "provider_model": "veo3",
+        "provider_model": "veo3.1-quality",
         "generation_type": "video",
         "price_tokens": 100,
         "icon": "🎬",
         "config": {"aspect_ratios": ["16:9", "9:16"], "mode": "text-to-video"},
     },
-
-    # sora → kie.ai
     {
-        "code": "sora-2-pro",
-        "name": "Sora 2 Pro",
-        "description": "OpenAI Sora 2 Pro — генерация видео",
-        "provider": "kie.ai",
-        "provider_model": "sora-2-pro-text-to-video",
-        "generation_type": "video",
-        "price_tokens": 80,
-        "icon": "🎥",
-        "config": {"aspect_ratios": ["16:9", "9:16", "1:1"], "mode": "text-to-video"},
-    },
-
-    # kling → kie.ai
-    {
-        "code": "kling-2.6",
-        "name": "Kling 2.6",
-        "description": "Kling 2.6 — высокое качество видео",
-        "provider": "kie.ai",
-        "provider_model": "kling-2.6/text-to-video",
+        "code": "kling-3.0-standard",
+        "name": "Kling 3.0",
+        "description": "Kuaishou Kling 3.0 — 720p, мульти-шоты, аудио",
+        "provider": "poyo.ai",
+        "provider_model": "kling-3.0/standard",
         "generation_type": "video",
         "price_tokens": 40,
         "icon": "🎞️",
-        "config": {"aspect_ratios": ["16:9", "9:16", "1:1"], "durations": ["5", "10"], "mode": "text-to-video"},
+        "config": {"aspect_ratios": ["16:9", "9:16", "1:1"], "durations": [3, 5, 10, 15], "mode": "text-to-video"},
     },
     {
-        "code": "kling-turbo",
-        "name": "Kling 2.5 Turbo",
-        "description": "Kling 2.5 Turbo — быстрое видео",
-        "provider": "kie.ai",
-        "provider_model": "kling/v2-5-turbo-text-to-video-pro",
+        "code": "kling-3.0-pro",
+        "name": "Kling 3.0 Pro",
+        "description": "Kuaishou Kling 3.0 Pro — 1080p, мульти-шоты, аудио",
+        "provider": "poyo.ai",
+        "provider_model": "kling-3.0/pro",
         "generation_type": "video",
-        "price_tokens": 30,
+        "price_tokens": 60,
         "icon": "🎞️",
-        "config": {"aspect_ratios": ["16:9", "9:16", "1:1"], "durations": ["5", "10"], "mode": "text-to-video"},
+        "config": {"aspect_ratios": ["16:9", "9:16", "1:1"], "durations": [3, 5, 10, 15], "mode": "text-to-video"},
     },
-
-    # hailuo → kie.ai
     {
-        "code": "hailuo-pro",
-        "name": "Hailuo Pro",
-        "description": "Hailuo Pro — высокое качество видео",
-        "provider": "kie.ai",
-        "provider_model": "hailuo/02-text-to-video-pro",
+        "code": "kling-2.6",
+        "name": "Kling 2.6",
+        "description": "Kling 2.6 — видео с нативным аудио",
+        "provider": "poyo.ai",
+        "provider_model": "kling-2.6",
+        "generation_type": "video",
+        "price_tokens": 35,
+        "icon": "🎞️",
+        "config": {"aspect_ratios": ["16:9", "9:16", "1:1"], "durations": [5, 10], "mode": "text-to-video"},
+    },
+    {
+        "code": "sora-2",
+        "name": "Sora 2",
+        "description": "OpenAI Sora 2 — генерация видео",
+        "provider": "poyo.ai",
+        "provider_model": "sora-2",
+        "generation_type": "video",
+        "price_tokens": 50,
+        "icon": "🎥",
+        "config": {"aspect_ratios": ["16:9", "9:16", "1:1"], "durations": [10, 15], "mode": "text-to-video"},
+    },
+    {
+        "code": "sora-2-pro",
+        "name": "Sora 2 Pro",
+        "description": "OpenAI Sora 2 Pro — премиум HD видео",
+        "provider": "poyo.ai",
+        "provider_model": "sora-2-pro",
+        "generation_type": "video",
+        "price_tokens": 80,
+        "icon": "🎥",
+        "config": {"aspect_ratios": ["16:9", "9:16", "1:1"], "durations": [15, 25], "mode": "text-to-video"},
+    },
+    {
+        "code": "seedance-1.5-pro",
+        "name": "Seedance 1.5 Pro",
+        "description": "ByteDance — аудио-визуальная генерация, lip-sync",
+        "provider": "poyo.ai",
+        "provider_model": "seedance-1.5-pro",
+        "generation_type": "video",
+        "price_tokens": 35,
+        "icon": "🌱",
+        "config": {"aspect_ratios": ["16:9", "9:16"], "mode": "text-to-video"},
+    },
+    {
+        "code": "hailuo-02-pro",
+        "name": "Hailuo 02 Pro",
+        "description": "MiniMax Hailuo 02 — 1080p кинематографичное видео",
+        "provider": "poyo.ai",
+        "provider_model": "hailuo-02-pro",
         "generation_type": "video",
         "price_tokens": 35,
         "icon": "🌊",
         "config": {"aspect_ratios": ["16:9", "9:16"], "mode": "text-to-video"},
     },
-
-    # wan → kie.ai
     {
         "code": "wan-2.6",
         "name": "Wan 2.6",
-        "description": "Wan 2.6 — генерация видео",
-        "provider": "kie.ai",
-        "provider_model": "wan/2-6-text-to-video",
+        "description": "Alibaba Wan 2.6 — мульти-шоты, 1080p",
+        "provider": "poyo.ai",
+        "provider_model": "wan2.6-text-to-video",
         "generation_type": "video",
         "price_tokens": 25,
         "icon": "🎭",
-        "config": {"aspect_ratios": ["16:9", "9:16"], "durations": ["5", "10"], "mode": "text-to-video"},
+        "config": {"aspect_ratios": ["16:9", "9:16"], "durations": [5, 10, 15], "mode": "text-to-video"},
     },
-
-    # runway → kie.ai
+    {
+        "code": "grok-imagine-video",
+        "name": "Grok Imagine Video",
+        "description": "xAI Aurora — генерация видео",
+        "provider": "poyo.ai",
+        "provider_model": "grok-imagine",
+        "generation_type": "video",
+        "price_tokens": 30,
+        "icon": "🚀",
+        "config": {"aspect_ratios": ["1:1", "2:3", "3:2"], "durations": [6, 10], "mode": "text-to-video"},
+    },
     {
         "code": "runway-gen4",
         "name": "Runway Gen-4",
@@ -419,92 +445,98 @@ DEFAULT_MODELS = [
         "generation_type": "video",
         "price_tokens": 45,
         "icon": "🛫",
-        "config": {"aspect_ratios": ["16:9", "9:16", "1:1", "4:3", "3:4"], "durations": ["5", "10"], "mode": "text-to-video"},
+        "config": {"aspect_ratios": ["16:9", "9:16", "1:1", "4:3", "3:4"], "durations": [5, 10], "mode": "text-to-video"},
     },
 
-    # =============================================
-    # VIDEO: IMAGE-TO-VIDEO
-    # =============================================
-
-    # veo3 i2v → poyo.ai
+    # ==================== VIDEO: Image-to-Video ====================
     {
         "code": "veo3-fast-i2v",
         "name": "Veo 3.1 Fast",
         "description": "Google Veo 3.1 — видео из изображения",
         "provider": "poyo.ai",
-        "provider_model": "veo3_fast",
+        "provider_model": "veo3.1-fast",
         "generation_type": "video",
         "price_tokens": 50,
         "icon": "🎬",
         "config": {"aspect_ratios": ["16:9", "9:16"], "mode": "image-to-video"},
     },
-
-    # sora i2v → kie.ai
+    {
+        "code": "kling-3.0-standard-i2v",
+        "name": "Kling 3.0",
+        "description": "Kling 3.0 — видео из изображения, 720p",
+        "provider": "poyo.ai",
+        "provider_model": "kling-3.0/standard",
+        "generation_type": "video",
+        "price_tokens": 40,
+        "icon": "🎞️",
+        "config": {"aspect_ratios": ["16:9", "9:16", "1:1"], "durations": [3, 5, 10, 15], "mode": "image-to-video"},
+    },
+    {
+        "code": "kling-2.6-i2v",
+        "name": "Kling 2.6",
+        "description": "Kling 2.6 — видео из изображения",
+        "provider": "kie.ai",
+        "provider_model": "kling-2.6/image-to-video",
+        "generation_type": "video",
+        "price_tokens": 35,
+        "icon": "🎞️",
+        "config": {"aspect_ratios": ["16:9", "9:16", "1:1"], "durations": [5, 10], "mode": "image-to-video"},
+    },
     {
         "code": "sora-2-i2v",
         "name": "Sora 2",
         "description": "OpenAI Sora 2 — видео из изображения",
-        "provider": "kie.ai",
-        "provider_model": "sora-2-image-to-video",
+        "provider": "poyo.ai",
+        "provider_model": "sora-2",
         "generation_type": "video",
-        "price_tokens": 60,
+        "price_tokens": 50,
         "icon": "🎥",
         "config": {"aspect_ratios": ["16:9", "9:16", "1:1"], "mode": "image-to-video"},
     },
-
-    # kling i2v → kie.ai
     {
-        "code": "kling-turbo-i2v",
-        "name": "Kling 2.5 Turbo",
-        "description": "Kling 2.5 Turbo — видео из изображения",
-        "provider": "kie.ai",
-        "provider_model": "kling/v2-5-turbo-image-to-video-pro",
+        "code": "seedance-1.5-pro-i2v",
+        "name": "Seedance 1.5 Pro",
+        "description": "ByteDance Seedance — видео из изображения с аудио",
+        "provider": "poyo.ai",
+        "provider_model": "seedance-1.5-pro",
         "generation_type": "video",
-        "price_tokens": 30,
-        "icon": "🎞️",
-        "config": {"aspect_ratios": ["16:9", "9:16", "1:1"], "durations": ["5", "10"], "mode": "image-to-video"},
+        "price_tokens": 35,
+        "icon": "🌱",
+        "config": {"aspect_ratios": ["16:9", "9:16"], "mode": "image-to-video"},
     },
-
-    # wan i2v → kie.ai
     {
         "code": "wan-2.6-i2v",
         "name": "Wan 2.6",
         "description": "Wan 2.6 — видео из изображения",
-        "provider": "kie.ai",
-        "provider_model": "wan/2-6-image-to-video",
+        "provider": "poyo.ai",
+        "provider_model": "wan2.6-image-to-video",
         "generation_type": "video",
         "price_tokens": 25,
         "icon": "🎭",
-        "config": {"aspect_ratios": ["16:9", "9:16"], "durations": ["5", "10"], "mode": "image-to-video"},
+        "config": {"aspect_ratios": ["16:9", "9:16"], "durations": [5, 10, 15], "mode": "image-to-video"},
     },
-
-    # hailuo i2v → kie.ai
     {
         "code": "hailuo-i2v",
-        "name": "Hailuo",
-        "description": "Hailuo — видео из изображения",
+        "name": "Hailuo 02",
+        "description": "Hailuo 02 — видео из изображения",
         "provider": "kie.ai",
-        "provider_model": "hailuo/2-3-image-to-video-pro",
+        "provider_model": "hailuo/02-image-to-video-pro",
         "generation_type": "video",
         "price_tokens": 35,
         "icon": "🌊",
         "config": {"aspect_ratios": ["16:9", "9:16"], "mode": "image-to-video"},
     },
-
-    # grok-imagine i2v → kie.ai
     {
         "code": "grok-imagine-i2v",
         "name": "Grok Imagine",
         "description": "xAI Grok — видео из изображения",
-        "provider": "kie.ai",
-        "provider_model": "grok-imagine/image-to-video",
+        "provider": "poyo.ai",
+        "provider_model": "grok-imagine",
         "generation_type": "video",
         "price_tokens": 30,
         "icon": "🚀",
-        "config": {"aspect_ratios": ["16:9", "9:16"], "mode": "image-to-video"},
+        "config": {"aspect_ratios": ["1:1", "2:3", "3:2"], "durations": [6, 10], "mode": "image-to-video"},
     },
-
-    # runway i2v → kie.ai
     {
         "code": "runway-gen4-i2v",
         "name": "Runway Gen-4",
@@ -514,12 +546,14 @@ DEFAULT_MODELS = [
         "generation_type": "video",
         "price_tokens": 45,
         "icon": "🛫",
-        "config": {"aspect_ratios": ["16:9", "9:16", "1:1", "4:3", "3:4"], "durations": ["5", "10"], "mode": "image-to-video"},
+        "config": {"aspect_ratios": ["16:9", "9:16", "1:1", "4:3", "3:4"], "durations": [5, 10], "mode": "image-to-video"},
     },
+
+    # ==================== VIDEO: Motion Control ====================
     {
         "code": "kling-2.6-motion-control",
         "name": "Kling 2.6 Motion Control",
-        "description": "Перенос движения с видео на изображение — танцы, жесты, движения",
+        "description": "Перенос движения с видео на изображение — танцы, жесты",
         "provider": "kie.ai",
         "provider_model": "kling-2.6/motion-control",
         "generation_type": "video",
@@ -533,10 +567,11 @@ DEFAULT_MODELS = [
     },
 ]
 
-
 async def seed_default_models(session: AsyncSession) -> None:
     """Seed default AI models to database."""
     repo = AIModelRepository(session)
+
+    known_codes = {m["code"] for m in DEFAULT_MODELS}
 
     for i, model_data in enumerate(DEFAULT_MODELS):
         existing = await repo.get_by_code(model_data["code"])
@@ -547,25 +582,32 @@ async def seed_default_models(session: AsyncSession) -> None:
             )
             logger.info(f"Seeded model | code={model_data['code']}, provider={model_data['provider']}")
         else:
-            # Update provider and provider_model for existing models
-            # in case they were seeded with old values
+            # Update technical fields (provider, provider_model, name, description, config, icon, sort_order)
+            # but preserve price_tokens set by admin
             changed = False
-            if existing.provider != model_data["provider"]:
-                existing.provider = model_data["provider"]
+            for field in ("provider", "provider_model", "name", "description", "icon"):
+                if getattr(existing, field) != model_data.get(field):
+                    setattr(existing, field, model_data.get(field))
+                    changed = True
+            if existing.config != model_data.get("config"):
+                existing.config = model_data.get("config")
                 changed = True
-            if existing.provider_model != model_data["provider_model"]:
-                existing.provider_model = model_data["provider_model"]
-                changed = True
-            if existing.name != model_data["name"]:
-                existing.name = model_data["name"]
+            if existing.sort_order != i:
+                existing.sort_order = i
                 changed = True
             if changed:
                 await session.flush()
                 logger.info(
                     f"Updated model | code={model_data['code']}, "
-                    f"provider={model_data['provider']}, provider_model={model_data['provider_model']}, "
-                    f"name={model_data['name']}"
+                    f"provider={model_data['provider']}, provider_model={model_data['provider_model']}"
                 )
+
+    # Disable models that are no longer in DEFAULT_MODELS
+    all_models = await repo.get_all(enabled_only=False)
+    for model in all_models:
+        if model.code not in known_codes and model.is_enabled:
+            await repo.set_enabled(model.id, False)
+            logger.info(f"Disabled obsolete model | code={model.code}")
 
     await session.commit()
 

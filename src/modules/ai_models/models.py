@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Enum, Integer, String, Text, func
+from sqlalchemy import Boolean, DateTime, Enum, Float, Integer, String, Text, func
 from sqlalchemy.dialects.postgresql import JSON
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -32,7 +32,7 @@ class AIModel(Base):
     )
     
     # Pricing
-    price_tokens: Mapped[int] = mapped_column(Integer, nullable=False, default=10)
+    price_tokens: Mapped[float] = mapped_column(Float, nullable=False, default=10.0)
     
     # Status
     is_enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)

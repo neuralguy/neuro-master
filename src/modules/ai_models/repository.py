@@ -53,7 +53,7 @@ class AIModelRepository:
         name: str,
         provider_model: str,
         generation_type: GenerationType,
-        price_tokens: int = 10,
+        price_tokens: float = 10.0,
         description: str | None = None,
         provider: str = "kie.ai",
         config: dict | None = None,
@@ -103,7 +103,7 @@ class AIModelRepository:
         
         logger.info(f"AI model {'enabled' if enabled else 'disabled'} | id={model_id}")
 
-    async def update_price(self, model_id: int, price_tokens: int) -> None:
+    async def update_price(self, model_id: int, price_tokens: float) -> None:
         """Update model price."""
         await self.session.execute(
             update(AIModel)

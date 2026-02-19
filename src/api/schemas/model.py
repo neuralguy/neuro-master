@@ -23,7 +23,7 @@ class AIModelResponse(BaseModel):
     name: str
     description: str | None
     generation_type: GenerationType
-    price_tokens: int
+    price_tokens: float
     is_enabled: bool
     config: AIModelConfig | dict
     icon: str | None
@@ -44,7 +44,7 @@ class AIModelUpdateRequest(BaseModel):
     """Update AI model request."""
     name: str | None = None
     description: str | None = None
-    price_tokens: int | None = None
+    price_tokens: float | None = None
     is_enabled: bool | None = None
     config: dict | None = None
     icon: str | None = None
@@ -57,7 +57,7 @@ class AIModelCreateRequest(BaseModel):
     name: str
     provider_model: str
     generation_type: GenerationType
-    price_tokens: int = 10
+    price_tokens: float = 10.0
     description: str | None = None
     config: dict | None = None
     icon: str | None = None
