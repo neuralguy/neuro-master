@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Upload, X, ChevronDown, ImageIcon, VideoIcon, Paperclip, Loader2, Gift, Users, Film } from 'lucide-react';
+import { X, ChevronDown, ImageIcon, VideoIcon, Paperclip, Loader2, Gift, Film } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { modelsApi } from '@/api/models';
@@ -13,32 +13,23 @@ import { useUser } from '@/hooks/useUser';
 import { useTelegram } from '@/hooks/useTelegram';
 import type { AIModel, GenerationType, AIModelsGrouped } from '@/types';
 
-/**
- * Given the full list of models for a type, filter based on
- * whether the user has uploaded an image.
- *
- * Key rule: motion-control is ALWAYS shown for video tab,
- * regardless of hasImage.
- */
-function filterModels(
+// ── helpers ──────────────────────────────────────────────
+
+function getFilteredModelIds(
   allModels: AIModel[],
   activeType: GenerationType,
   hasImage: boolean,
-): AIModel[] {
+): number[] {
+  let filtered: AIModel[];
+
   if (activeType === 'video') {
     if (hasImage) {
-      // Has image: show image-to-video + motion-control
-      return allModels.filter(m => {
+      filtered = allModels.filter(m => {
         const mode = m.config?.mode;
-        return (
-          mode === 'image-to-video' ||
-          mode === 'motion-control' ||
-          m.code.includes('-i2v')
-        );
+        return mode === 'image-to-video' || mode === 'motion-control' || m.code.includes('-i2v');
       });
     } else {
-      // No image: show text-to-video + motion-control
-      return allModels.filter(m => {
+      filtered = allModels.filter(m => {
         const mode = m.config?.mode;
         if (mode === 'motion-control') return true;
         if (mode === 'image-to-video') return false;
@@ -46,22 +37,29 @@ function filterModels(
         return true;
       });
     }
-  }
-
-  if (activeType === 'image') {
+  } else if (activeType === 'image') {
     if (hasImage) {
-      return allModels.filter(m =>
+      filtered = allModels.filter(m =>
         m.code.includes('-edit') || m.config?.mode === 'image-to-image'
       );
     } else {
-      return allModels.filter(m =>
+      filtered = allModels.filter(m =>
         !m.code.includes('-edit') && m.config?.mode !== 'image-to-image'
       );
     }
+  } else {
+    filtered = [];
   }
 
-  return [];
+  return filtered.map(m => m.id);
 }
+
+/** Stable stringified key so we can compare in useMemo */
+function idsKey(ids: number[]): string {
+  return ids.join(',');
+}
+
+// ── component ────────────────────────────────────────────
 
 export default function GeneratePage() {
   const { user, updateBalance } = useUser();
@@ -78,12 +76,12 @@ export default function GeneratePage() {
   const [prompt, setPrompt] = useState('');
   const [aspectRatio, setAspectRatio] = useState('1:1');
 
-  // Image upload state
+  // Image upload
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
 
-  // Video upload state
+  // Video upload
   const [uploadedVideo, setUploadedVideo] = useState<string | null>(null);
   const [uploadedVideoUrl, setUploadedVideoUrl] = useState<string | null>(null);
   const [isUploadingVideo, setIsUploadingVideo] = useState(false);
@@ -99,21 +97,36 @@ export default function GeneratePage() {
   const hasImage = !!uploadedImage;
   const hasVideo = !!uploadedVideo;
 
-  // All models for current type (unfiltered by hasImage)
-  const allModelsForType = useMemo(() => {
+  // All models for the active type (stable unless modelsGrouped or activeType change)
+  const allModelsForType = useMemo<AIModel[]>(() => {
     if (!modelsGrouped) return [];
     if (activeType === 'video') return modelsGrouped.video || [];
     if (activeType === 'image') return modelsGrouped.image || [];
     return [];
   }, [modelsGrouped, activeType]);
 
-  // Filtered models based on hasImage
-  const currentModels = useMemo(
-    () => filterModels(allModelsForType, activeType, hasImage),
+  // Compute filtered IDs, then stabilise the array reference
+  const filteredIdsRaw = useMemo(
+    () => getFilteredModelIds(allModelsForType, activeType, hasImage),
     [allModelsForType, activeType, hasImage],
   );
 
-  // Derive selectedModel from ID
+  const filteredIdsKeyStr = idsKey(filteredIdsRaw);
+  const prevFilteredIdsKeyRef = useRef(filteredIdsKeyStr);
+
+  // Only produce a new Set when the actual content changes
+  const filteredIdSet = useMemo(() => {
+    prevFilteredIdsKeyRef.current = filteredIdsKeyStr;
+    return new Set(filteredIdsRaw);
+  }, [filteredIdsKeyStr]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // The visible model list (stable reference when ids haven't changed)
+  const currentModels = useMemo(
+    () => allModelsForType.filter(m => filteredIdSet.has(m.id)),
+    [allModelsForType, filteredIdSet],
+  );
+
+  // Derive selectedModel
   const selectedModel = useMemo(() => {
     if (selectedModelId == null) return null;
     return currentModels.find(m => m.id === selectedModelId) ?? null;
@@ -121,45 +134,48 @@ export default function GeneratePage() {
 
   const isMotionControl = selectedModel?.config?.mode === 'motion-control';
 
-  // ------------------------------------------------------------------
-  // Auto-select logic: only pick a new model when current selection
-  // is NOT present in the filtered list.
-  // We use a ref to avoid stale closure issues in useEffect.
-  // ------------------------------------------------------------------
+  // ── auto-select model ──────────────────────────────────
+  // We intentionally do NOT depend on selectedModelId (read via ref)
+  // to avoid re-triggering when user manually picks a model.
   const selectedModelIdRef = useRef(selectedModelId);
   selectedModelIdRef.current = selectedModelId;
 
   useEffect(() => {
+    const currentId = selectedModelIdRef.current;
+
+    console.log('[auto-select] currentModels ids:', currentModels.map(m => m.id), 'selectedModelId:', currentId);
+
     if (currentModels.length === 0) {
-      if (selectedModelIdRef.current !== null) {
+      if (currentId !== null) {
+        console.log('[auto-select] no models, clearing selection');
         setSelectedModelId(null);
       }
       return;
     }
 
-    const currentId = selectedModelIdRef.current;
-
-    // If current selection still exists in the list — keep it
     if (currentId != null && currentModels.some(m => m.id === currentId)) {
+      console.log('[auto-select] current selection still valid, keeping:', currentId);
       return;
     }
 
-    // Otherwise pick the first model
+    console.log('[auto-select] current selection NOT in list, picking first:', currentModels[0].id);
     setSelectedModelId(currentModels[0].id);
   }, [currentModels]);
 
-  // Reset aspect ratio when model changes
+  // Reset aspect ratio when selected model changes
+  const prevSelectedModelIdRef = useRef<number | null>(null);
   useEffect(() => {
-    if (selectedModel?.config?.aspect_ratios?.length) {
-      setAspectRatio(selectedModel.config.aspect_ratios[0]);
-    } else {
-      setAspectRatio('1:1');
+    if (selectedModel && selectedModel.id !== prevSelectedModelIdRef.current) {
+      prevSelectedModelIdRef.current = selectedModel.id;
+      if (selectedModel.config?.aspect_ratios?.length) {
+        setAspectRatio(selectedModel.config.aspect_ratios[0]);
+      } else {
+        setAspectRatio('1:1');
+      }
     }
-  }, [selectedModel?.id]); // depend on id, not the whole object
+  }, [selectedModel]);
 
-  // ------------------------------------------------------------------
-  // Generation mutation
-  // ------------------------------------------------------------------
+  // ── generation mutation ────────────────────────────────
   const generation = useMutation({
     mutationFn: (request: {
       model_code: string;
@@ -186,58 +202,36 @@ export default function GeneratePage() {
     },
   });
 
-  // ------------------------------------------------------------------
-  // Upload handlers
-  // ------------------------------------------------------------------
+  // ── upload handlers ────────────────────────────────────
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    if (file.size > 10 * 1024 * 1024) {
-      alert('Файл слишком большой. Максимум 10MB');
-      return;
-    }
+    if (file.size > 10 * 1024 * 1024) { alert('Файл слишком большой. Максимум 10MB'); return; }
 
     const reader = new FileReader();
-    reader.onload = (event) => {
-      setUploadedImage(event.target?.result as string);
-    };
+    reader.onload = (event) => setUploadedImage(event.target?.result as string);
     reader.readAsDataURL(file);
 
     setIsUploadingImage(true);
     try {
       const response = await uploadApi.uploadFile(file);
       setUploadedImageUrl(response.url);
-    } catch (error) {
-      alert('Ошибка загрузки изображения');
-      setUploadedImage(null);
-    } finally {
-      setIsUploadingImage(false);
-    }
+    } catch { alert('Ошибка загрузки изображения'); setUploadedImage(null); }
+    finally { setIsUploadingImage(false); }
   };
 
   const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (file.size > 200 * 1024 * 1024) { alert('Видео слишком большое. Максимум 200MB'); return; }
 
-    if (file.size > 200 * 1024 * 1024) {
-      alert('Видео слишком большое. Максимум 200MB');
-      return;
-    }
-
-    const videoObjectUrl = URL.createObjectURL(file);
-    setUploadedVideo(videoObjectUrl);
-
+    setUploadedVideo(URL.createObjectURL(file));
     setIsUploadingVideo(true);
     try {
       const response = await uploadApi.uploadFile(file);
       setUploadedVideoUrl(response.url);
-    } catch (error) {
-      alert('Ошибка загрузки видео');
-      setUploadedVideo(null);
-    } finally {
-      setIsUploadingVideo(false);
-    }
+    } catch { alert('Ошибка загрузки видео'); setUploadedVideo(null); }
+    finally { setIsUploadingVideo(false); }
   };
 
   const removeImage = () => {
@@ -254,45 +248,20 @@ export default function GeneratePage() {
     if (videoInputRef.current) videoInputRef.current.value = '';
   };
 
-  // ------------------------------------------------------------------
-  // Submit
-  // ------------------------------------------------------------------
+  // ── submit ─────────────────────────────────────────────
   const handleSubmit = async () => {
-    if (!selectedModel) {
-      alert('Выберите модель');
-      return;
-    }
+    if (!selectedModel) { alert('Выберите модель'); return; }
 
     if (isMotionControl) {
-      if (!uploadedImageUrl && !uploadedVideoUrl) {
-        alert('Для Motion Control необходимо загрузить фото персонажа и референсное видео с движением');
-        return;
-      }
-      if (!uploadedImageUrl) {
-        alert('Для Motion Control необходимо загрузить фото персонажа');
-        return;
-      }
-      if (!uploadedVideoUrl) {
-        alert('Для Motion Control необходимо загрузить референсное видео с движением');
-        return;
-      }
+      if (!uploadedImageUrl) { alert('Для Motion Control необходимо загрузить фото персонажа'); return; }
+      if (!uploadedVideoUrl) { alert('Для Motion Control необходимо загрузить референсное видео с движением'); return; }
     } else if (!hasImage && !prompt.trim()) {
-      alert('Введите описание');
-      return;
+      alert('Введите описание'); return;
     }
 
-    if (hasImage && !uploadedImageUrl) {
-      alert('Дождитесь загрузки изображения');
-      return;
-    }
-    if (hasVideo && !uploadedVideoUrl) {
-      alert('Дождитесь загрузки видео');
-      return;
-    }
-    if (user && selectedModel && user.balance < selectedModel.price_tokens) {
-      alert('Недостаточно токенов');
-      return;
-    }
+    if (hasImage && !uploadedImageUrl) { alert('Дождитесь загрузки изображения'); return; }
+    if (hasVideo && !uploadedVideoUrl) { alert('Дождитесь загрузки видео'); return; }
+    if (user && selectedModel && user.balance < selectedModel.price_tokens) { alert('Недостаточно токенов'); return; }
 
     generation.mutate({
       model_code: selectedModel.code,
@@ -303,9 +272,7 @@ export default function GeneratePage() {
     });
   };
 
-  // ------------------------------------------------------------------
-  // Tab change — full reset
-  // ------------------------------------------------------------------
+  // ── tab change ─────────────────────────────────────────
   const handleTypeChange = (type: GenerationType) => {
     setActiveType(type);
     setUploadedImage(null);
@@ -319,19 +286,13 @@ export default function GeneratePage() {
 
   // Close dropdowns on outside click
   useEffect(() => {
-    const handleClickOutside = () => {
-      setIsModelDropdownOpen(false);
-      setIsRatioDropdownOpen(false);
-    };
-    if (isModelDropdownOpen || isRatioDropdownOpen) {
-      document.addEventListener('click', handleClickOutside);
-      return () => document.removeEventListener('click', handleClickOutside);
-    }
+    if (!isModelDropdownOpen && !isRatioDropdownOpen) return;
+    const handler = () => { setIsModelDropdownOpen(false); setIsRatioDropdownOpen(false); };
+    document.addEventListener('click', handler);
+    return () => document.removeEventListener('click', handler);
   }, [isModelDropdownOpen, isRatioDropdownOpen]);
 
-  // ------------------------------------------------------------------
-  // Render
-  // ------------------------------------------------------------------
+  // ── render ─────────────────────────────────────────────
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -344,7 +305,7 @@ export default function GeneratePage() {
 
   return (
     <div className="flex flex-col gap-4 p-4">
-      {/* Табы Фото/Видео */}
+      {/* Табы */}
       <div className="bg-gray-100 dark:bg-gray-800 p-1.5 rounded-2xl flex gap-1">
         <button
           onClick={() => handleTypeChange('image')}
@@ -370,54 +331,37 @@ export default function GeneratePage() {
         </button>
       </div>
 
-      {/* Превью загруженных файлов */}
+      {/* Превью */}
       {(uploadedImage || uploadedVideo) && (
         <div className="flex gap-3">
           {uploadedImage && (
             <div className="relative bg-gray-100 dark:bg-gray-800 rounded-2xl p-3 flex-1">
               <div className="text-xs text-gray-500 mb-2 font-medium">Изображение</div>
               <div className="flex items-center justify-center">
-                <img
-                  src={uploadedImage}
-                  alt="Uploaded"
-                  className="max-w-full max-h-36 w-auto h-auto object-contain rounded-xl"
-                />
+                <img src={uploadedImage} alt="Uploaded" className="max-w-full max-h-36 w-auto h-auto object-contain rounded-xl" />
               </div>
               {isUploadingImage && (
                 <div className="absolute inset-0 bg-black/50 rounded-2xl flex items-center justify-center">
                   <Loader2 className="w-8 h-8 text-white animate-spin" />
                 </div>
               )}
-              <button
-                onClick={removeImage}
-                className="absolute top-2 right-2 p-1.5 bg-black/60 hover:bg-black/80 rounded-full text-white transition-colors"
-              >
+              <button onClick={removeImage} className="absolute top-2 right-2 p-1.5 bg-black/60 hover:bg-black/80 rounded-full text-white transition-colors">
                 <X className="w-3.5 h-3.5" />
               </button>
             </div>
           )}
-
           {uploadedVideo && (
             <div className="relative bg-gray-100 dark:bg-gray-800 rounded-2xl p-3 flex-1">
               <div className="text-xs text-gray-500 mb-2 font-medium">Референс видео</div>
               <div className="flex items-center justify-center">
-                <video
-                  src={uploadedVideo}
-                  className="max-w-full max-h-36 w-auto h-auto object-contain rounded-xl"
-                  controls
-                  muted
-                  playsInline
-                />
+                <video src={uploadedVideo} className="max-w-full max-h-36 w-auto h-auto object-contain rounded-xl" controls muted playsInline />
               </div>
               {isUploadingVideo && (
                 <div className="absolute inset-0 bg-black/50 rounded-2xl flex items-center justify-center">
                   <Loader2 className="w-8 h-8 text-white animate-spin" />
                 </div>
               )}
-              <button
-                onClick={removeVideo}
-                className="absolute top-2 right-2 p-1.5 bg-black/60 hover:bg-black/80 rounded-full text-white transition-colors"
-              >
+              <button onClick={removeVideo} className="absolute top-2 right-2 p-1.5 bg-black/60 hover:bg-black/80 rounded-full text-white transition-colors">
                 <X className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -425,7 +369,7 @@ export default function GeneratePage() {
         </div>
       )}
 
-      {/* Motion Control подсказка */}
+      {/* Motion Control hint */}
       {isMotionControl && (
         <div className="bg-purple-50 dark:bg-purple-900/30 border border-purple-200 dark:border-purple-800 rounded-2xl p-3">
           <div className="flex items-center gap-2 text-purple-700 dark:text-purple-300 text-sm font-medium mb-1">
@@ -438,7 +382,7 @@ export default function GeneratePage() {
         </div>
       )}
 
-      {/* Основная карточка ввода */}
+      {/* Input card */}
       <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm">
         <div className="relative">
           <textarea
@@ -447,57 +391,32 @@ export default function GeneratePage() {
             placeholder={
               isMotionControl
                 ? 'Опишите желаемое движение (напр. "Персонаж танцует")...'
-                : hasImage
-                  ? 'Опишите желаемые изменения...'
-                  : 'Опишите что хотите создать...'
+                : hasImage ? 'Опишите желаемые изменения...' : 'Опишите что хотите создать...'
             }
             className="w-full h-32 p-4 pr-24 bg-transparent text-gray-900 dark:text-white placeholder-gray-400 resize-none border-0 focus:ring-0 text-sm rounded-t-2xl"
           />
-
           <div className="absolute bottom-3 right-3 flex gap-2">
             {showVideoUpload && (
               <button
                 onClick={() => videoInputRef.current?.click()}
                 disabled={isUploadingVideo}
-                className={`p-2.5 rounded-xl transition-colors ${
-                  hasVideo
-                    ? 'bg-purple-100 dark:bg-purple-900/50 text-purple-600 dark:text-purple-400'
-                    : 'bg-gray-100 dark:bg-gray-800 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
-                }`}
-                title="Загрузить референсное видео для Motion Control"
+                className={`p-2.5 rounded-xl transition-colors ${hasVideo ? 'bg-purple-100 dark:bg-purple-900/50 text-purple-600 dark:text-purple-400' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+                title="Загрузить референсное видео"
               >
                 {isUploadingVideo ? <Loader2 className="w-5 h-5 animate-spin" /> : <Film className="w-5 h-5" />}
               </button>
             )}
-
             <button
               onClick={() => imageInputRef.current?.click()}
               disabled={isUploadingImage}
-              className={`p-2.5 rounded-xl transition-colors ${
-                hasImage
-                  ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400'
-                  : 'bg-gray-100 dark:bg-gray-800 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
-              }`}
+              className={`p-2.5 rounded-xl transition-colors ${hasImage ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
               title="Загрузить изображение"
             >
               {isUploadingImage ? <Loader2 className="w-5 h-5 animate-spin" /> : <Paperclip className="w-5 h-5" />}
             </button>
           </div>
-
-          <input
-            ref={imageInputRef}
-            type="file"
-            accept="image/*"
-            onChange={handleImageUpload}
-            className="hidden"
-          />
-          <input
-            ref={videoInputRef}
-            type="file"
-            accept="video/mp4,video/quicktime,video/webm,.mp4,.mov,.webm"
-            onChange={handleVideoUpload}
-            className="hidden"
-          />
+          <input ref={imageInputRef} type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+          <input ref={videoInputRef} type="file" accept="video/mp4,video/quicktime,video/webm,.mp4,.mov,.webm" onChange={handleVideoUpload} className="hidden" />
         </div>
 
         <div className="border-t border-gray-100 dark:border-gray-800" />
@@ -506,11 +425,7 @@ export default function GeneratePage() {
           {currentModels.length > 0 && (
             <div className="relative flex-1">
               <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setIsModelDropdownOpen(!isModelDropdownOpen);
-                  setIsRatioDropdownOpen(false);
-                }}
+                onClick={(e) => { e.stopPropagation(); setIsModelDropdownOpen(!isModelDropdownOpen); setIsRatioDropdownOpen(false); }}
                 className="w-full flex items-center justify-between p-3 rounded-xl bg-gray-50 dark:bg-gray-800 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
               >
                 <span className="flex items-center gap-2 text-gray-900 dark:text-white">
@@ -519,7 +434,6 @@ export default function GeneratePage() {
                 </span>
                 <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isModelDropdownOpen ? 'rotate-180' : ''}`} />
               </button>
-
               {isModelDropdownOpen && (
                 <div
                   className="absolute bottom-full left-0 right-0 mb-2 bg-white dark:bg-gray-800 rounded-xl shadow-xl z-[100] max-h-56 overflow-y-auto border border-gray-200 dark:border-gray-700"
@@ -528,13 +442,8 @@ export default function GeneratePage() {
                   {currentModels.map((model) => (
                     <button
                       key={model.id}
-                      onClick={() => {
-                        setSelectedModelId(model.id);
-                        setIsModelDropdownOpen(false);
-                      }}
-                      className={`w-full flex items-center gap-2 p-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700 text-sm transition-colors ${
-                        selectedModelId === model.id ? 'bg-blue-50 dark:bg-blue-900/30' : ''
-                      }`}
+                      onClick={() => { setSelectedModelId(model.id); setIsModelDropdownOpen(false); }}
+                      className={`w-full flex items-center gap-2 p-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700 text-sm transition-colors ${selectedModelId === model.id ? 'bg-blue-50 dark:bg-blue-900/30' : ''}`}
                     >
                       {model.icon && <span className="text-lg">{model.icon}</span>}
                       <div className="flex-1 min-w-0">
@@ -554,17 +463,12 @@ export default function GeneratePage() {
           {!isMotionControl && (
             <div className="relative">
               <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setIsRatioDropdownOpen(!isRatioDropdownOpen);
-                  setIsModelDropdownOpen(false);
-                }}
+                onClick={(e) => { e.stopPropagation(); setIsRatioDropdownOpen(!isRatioDropdownOpen); setIsModelDropdownOpen(false); }}
                 className="flex items-center justify-between gap-2 p-3 rounded-xl bg-gray-50 dark:bg-gray-800 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors min-w-[80px]"
               >
                 <span className="text-gray-900 dark:text-white font-medium">{aspectRatio}</span>
                 <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isRatioDropdownOpen ? 'rotate-180' : ''}`} />
               </button>
-
               {isRatioDropdownOpen && (
                 <div
                   className="absolute bottom-full right-0 mb-2 bg-white dark:bg-gray-800 rounded-xl shadow-xl z-[100] overflow-hidden border border-gray-200 dark:border-gray-700 min-w-[100px]"
@@ -573,13 +477,8 @@ export default function GeneratePage() {
                   {aspectRatios.map((ratio) => (
                     <button
                       key={ratio}
-                      onClick={() => {
-                        setAspectRatio(ratio);
-                        setIsRatioDropdownOpen(false);
-                      }}
-                      className={`w-full p-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700 text-sm transition-colors ${
-                        aspectRatio === ratio ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'text-gray-900 dark:text-white'
-                      }`}
+                      onClick={() => { setAspectRatio(ratio); setIsRatioDropdownOpen(false); }}
+                      className={`w-full p-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700 text-sm transition-colors ${aspectRatio === ratio ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'text-gray-900 dark:text-white'}`}
                     >
                       {ratio}
                     </button>
@@ -591,7 +490,6 @@ export default function GeneratePage() {
         </div>
       </div>
 
-      {/* Кнопка генерации */}
       <Button
         onClick={handleSubmit}
         disabled={generation.isPending || !selectedModel || isUploadingImage || isUploadingVideo}
@@ -601,7 +499,6 @@ export default function GeneratePage() {
         {generation.isPending ? 'Генерация...' : 'Сгенерировать'}
       </Button>
 
-      {/* Блок приглашения друзей */}
       <Card
         className="bg-gradient-to-br from-green-500 via-emerald-500 to-teal-600 text-white cursor-pointer active:scale-[0.98] transition-transform mt-2"
         onClick={() => navigate('/profile')}
@@ -612,12 +509,8 @@ export default function GeneratePage() {
           </div>
           <div className="flex-1 min-w-0">
             <h3 className="font-bold text-lg leading-tight">Приглашай друзей</h3>
-            <p className="text-sm text-white/80 mt-1">
-              Получай <span className="font-bold text-white">15</span> токенов за каждого друга
-            </p>
-            <p className="text-xs text-white/60 mt-1">
-              Друзья тоже получат 15 токенов при регистрации
-            </p>
+            <p className="text-sm text-white/80 mt-1">Получай <span className="font-bold text-white">15</span> токенов за каждого друга</p>
+            <p className="text-xs text-white/60 mt-1">Друзья тоже получат 15 токенов при регистрации</p>
           </div>
           <button className="px-4 py-2.5 bg-white/20 hover:bg-white/30 rounded-xl text-sm font-semibold transition-colors flex-shrink-0">
             Подробнее
