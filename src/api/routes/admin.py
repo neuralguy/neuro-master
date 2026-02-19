@@ -157,6 +157,77 @@ async def get_all_models(
     return [AIModelResponse.model_validate(m) for m in models]
 
 
+@router.post("/models", response_model=AIModelResponse)
+async def create_model(
+    request: AIModelCreateRequest,
+    admin_user: AdminUser,
+    session: SessionDep,
+) -> AIModelResponse:
+    """Create new AI model."""
+    service = AIModelService(session)
+
+    try:
+        model = await service.create_model(
+            code=request.code,
+            name=request.name,
+            provider_model=request.provider_model,
+            generation_type=request.generation_type,
+            price_tokens=request.price_tokens,
+            description=request.description,
+            config=request.config,
+            icon=request.icon,
+        )
+        logger.info(f"Admin created model | admin_id={admin_user.id}, model_code={model.code}")
+        return AIModelResponse.model_validate(model)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+
+
+@router.patch("/models/{model_id}", response_model=AIModelResponse)
+async def update_model(
+    model_id: int,
+    request: AIModelUpdateRequest,
+    admin_user: AdminUser,
+    session: SessionDep,
+) -> AIModelResponse:
+    """Update AI model."""
+    service = AIModelService(session)
+
+    try:
+        updates = request.model_dump(exclude_none=True)
+        model = await service.update_model(model_id, **updates)
+        logger.info(f"Admin updated model | admin_id={admin_user.id}, model_id={model_id}")
+        return AIModelResponse.model_validate(model)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e),
+        )
+
+
+@router.delete("/models/{model_id}", response_model=MessageResponse)
+async def delete_model(
+    model_id: int,
+    admin_user: AdminUser,
+    session: SessionDep,
+) -> MessageResponse:
+    """Delete AI model."""
+    service = AIModelService(session)
+
+    try:
+        await service.delete_model(model_id)
+        logger.info(f"Admin deleted model | admin_id={admin_user.id}, model_id={model_id}")
+        return MessageResponse(message="Модель удалена")
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e),
+        )
+
+
 @router.post("/models/{model_id}/toggle", response_model=MessageResponse)
 async def toggle_model(
     model_id: int,
@@ -165,15 +236,15 @@ async def toggle_model(
 ) -> MessageResponse:
     """Toggle model enabled/disabled status."""
     service = AIModelService(session)
-    
+
     try:
         new_status = await service.toggle_model(model_id)
         status_text = "включена" if new_status else "отключена"
-        
+
         logger.info(f"Admin toggled model | admin_id={admin_user.id}, model_id={model_id}, enabled={new_status}")
-        
+
         return MessageResponse(message=f"Модель {status_text}")
-        
+
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
