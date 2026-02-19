@@ -40,6 +40,7 @@ export const ModelsPage = () => {
       adminApi.updateModel(modelId, updates),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'models'] });
+      queryClient.invalidateQueries({ queryKey: ['models'] });
       hapticFeedback.success();
       showAlert('Модель обновлена');
       setEditingModel(null);
@@ -54,6 +55,7 @@ export const ModelsPage = () => {
     mutationFn: adminApi.toggleModel,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'models'] });
+      queryClient.invalidateQueries({ queryKey: ['models'] });
       hapticFeedback.success();
     },
     onError: (error: Error) => {
@@ -89,9 +91,9 @@ export const ModelsPage = () => {
   const handleSave = () => {
     if (!editingModel) return;
 
-    const price = parseInt(formData.price_tokens);
-    if (isNaN(price) || price < 1) {
-      showAlert('Минимальная цена: 1 токен');
+    const price = parseFloat(formData.price_tokens);
+    if (isNaN(price) || price <= 0) {
+      showAlert('Цена должна быть больше 0');
       return;
     }
 
