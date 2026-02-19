@@ -118,9 +118,11 @@ class KieProvider(BaseGenerationProvider):
                 input_data["duration"] = request.duration
         
         # Add extra params
+        # For motion-control skip standard video params that are not applicable
+        motion_control_skip = {"aspect_ratio", "duration", "output_format"} if is_motion_control else set()
         if request.extra_params:
             for k, v in request.extra_params.items():
-                if k not in input_data and not k.startswith("_"):
+                if k not in input_data and not k.startswith("_") and k not in motion_control_skip:
                     input_data[k] = v
         
         payload = {
