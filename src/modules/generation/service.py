@@ -21,6 +21,15 @@ from src.shared.enums import BalanceOperationType, GenerationStatus, GenerationT
 from src.shared.logger import logger
 
 
+async def _notify_user(telegram_id: int, text: str, **kwargs) -> None:
+    """Send notification to user in Telegram chat. Silently ignores errors."""
+    try:
+        from src.bot.loader import bot
+        await bot.send_message(chat_id=telegram_id, text=text, **kwargs)
+    except Exception as e:
+        logger.warning(f"Failed to notify user | telegram_id={telegram_id}, error={e}")
+
+
 class GenerationService:
     """Service for generation business logic."""
 
@@ -118,9 +127,22 @@ class GenerationService:
             reference_id=str(generation.id),
         )
 
+        # Notify user that generation has started
+        gen_type_text = "🎬 Видео" if model.generation_type == GenerationType.VIDEO else "🖼 Изображение"
+        asyncio.create_task(
+            _notify_user(
+                user.telegram_id,
+                f"{gen_type_text} генерируется...\n\n"
+                f"🤖 Модель: <b>{model.name}</b>\n"
+                f"💰 Списано: <b>{model.price_tokens} токенов</b>\n\n"
+                f"⏳ Обычно занимает до 2 минут. Результат придёт сюда автоматически.",
+                parse_mode="HTML",
+            )
+        )
+
         # Start generation task in background
         asyncio.create_task(
-            self._process_generation(generation, model.provider_model, model.provider)
+            self._process_generation(generation, model.provider_model, model.provider, user.telegram_id)
         )
 
         logger.info(
@@ -135,6 +157,7 @@ class GenerationService:
         generation: Generation,
         provider_model: str,
         provider_name: str,
+        telegram_id: int | None = None,
     ) -> None:
         """Process generation in background."""
         try:
@@ -185,6 +208,7 @@ class GenerationService:
                 generation.id,
                 task.task_id,
                 provider_name=provider_name,
+                telegram_id=telegram_id,
             )
 
         except Exception as e:
@@ -199,6 +223,12 @@ class GenerationService:
             # Refund tokens
             await self._refund_tokens(generation)
 
+            if telegram_id:
+                await _notify_user(
+                    telegram_id,
+                    "❌ Генерация не удалась. Токены возвращены на баланс.",
+                )
+
     async def _poll_generation(
         self,
         generation_id: uuid.UUID,
@@ -206,6 +236,7 @@ class GenerationService:
         max_attempts: int = 120,
         interval: float = 3.0,
         provider_name: str = "kie.ai",
+        telegram_id: int | None = None,
     ) -> None:
         """Poll for generation completion."""
         provider = self._get_provider(provider_name)
@@ -231,6 +262,8 @@ class GenerationService:
                         generation = await self.generation_repo.get_by_id(generation_id)
                         if generation:
                             await self._refund_tokens(generation)
+                        if telegram_id:
+                            await _notify_user(telegram_id, "❌ Генерация не удалась. Токены возвращены на баланс.")
                         return
 
                     # Download and save result
@@ -259,6 +292,11 @@ class GenerationService:
                     await self.session.commit()
 
                     logger.info(f"Generation completed | id={generation_id}, provider={provider_name}")
+
+                    # Send result to user in Telegram
+                    if telegram_id and file_path:
+                        await self._send_result_to_user(telegram_id, file_path, generation)
+
                     return
 
                 elif task.status == "failed":
@@ -273,6 +311,9 @@ class GenerationService:
                     generation = await self.generation_repo.get_by_id(generation_id)
                     if generation:
                         await self._refund_tokens(generation)
+
+                    if telegram_id:
+                        await _notify_user(telegram_id, "❌ Генерация не удалась. Токены возвращены на баланс.")
 
                     return
 
@@ -301,6 +342,41 @@ class GenerationService:
         generation = await self.generation_repo.get_by_id(generation_id)
         if generation:
             await self._refund_tokens(generation)
+
+        if telegram_id:
+            await _notify_user(telegram_id, "❌ Генерация не удалась (timeout). Токены возвращены на баланс.")
+
+    async def _send_result_to_user(
+        self,
+        telegram_id: int,
+        file_path: str,
+        generation: Generation | None,
+    ) -> None:
+        """Send generation result file to user in Telegram."""
+        try:
+            from aiogram.types import FSInputFile
+            from src.bot.loader import bot
+
+            path = Path(file_path)
+            if not path.exists():
+                await _notify_user(telegram_id, f"✅ Генерация завершена!\n\n🔗 Результат доступен в приложении.")
+                return
+
+            caption = "✅ Готово!"
+            if generation and generation.prompt:
+                caption += f"\n\n📝 <i>{generation.prompt[:200]}</i>"
+
+            input_file = FSInputFile(path)
+
+            is_video = path.suffix.lower() in (".mp4", ".webm", ".gif")
+            if is_video:
+                await bot.send_video(chat_id=telegram_id, video=input_file, caption=caption, parse_mode="HTML")
+            else:
+                await bot.send_photo(chat_id=telegram_id, photo=input_file, caption=caption, parse_mode="HTML")
+
+        except Exception as e:
+            logger.warning(f"Failed to send result to user | telegram_id={telegram_id}, error={e}")
+            await _notify_user(telegram_id, "✅ Генерация завершена! Результат доступен в приложении.")
 
     async def _download_result(
         self,
