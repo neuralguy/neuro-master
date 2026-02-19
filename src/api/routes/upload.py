@@ -103,6 +103,36 @@ async def upload_file(
                 detail="Ошибка конвертации изображения"
             )
 
+    # Check video duration (3s - 30s)
+    if is_video:
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                "ffprobe", "-v", "error",
+                "-show_entries", "format=duration",
+                "-of", "default=noprint_wrappers=1:nokey=1",
+                str(filepath),
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.DEVNULL,
+            )
+            stdout, _ = await proc.communicate()
+            duration = float(stdout.decode().strip())
+            if duration < 3:
+                filepath.unlink(missing_ok=True)
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Видео слишком короткое ({duration:.1f}с). Минимум 3 секунды."
+                )
+            if duration > 30:
+                filepath.unlink(missing_ok=True)
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Видео слишком длинное ({duration:.1f}с). Максимум 30 секунд."
+                )
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.warning(f"Could not check video duration | {e}")
+
     # Convert non-mp4 video to mp4
     if is_video and ext != "mp4":
         mp4_filename = f"{uuid.uuid4()}.mp4"

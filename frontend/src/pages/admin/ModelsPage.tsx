@@ -28,6 +28,7 @@ export const ModelsPage = () => {
     price_tokens: '',
     price_per_second: '',
     icon: '',
+    is_per_second: false,
   });
   const queryClient = useQueryClient();
 
@@ -86,6 +87,7 @@ export const ModelsPage = () => {
       price_tokens: model.price_tokens.toString(),
       price_per_second: model.price_per_second != null ? model.price_per_second.toString() : '',
       icon: model.icon || '',
+      is_per_second: model.price_per_second != null,
     });
     hapticFeedback.light();
   };
@@ -93,7 +95,7 @@ export const ModelsPage = () => {
   const handleSave = () => {
     if (!editingModel) return;
 
-    const isPerSecond = editingModel.price_per_second != null;
+    const isPerSecond = formData.is_per_second;
 
     if (isPerSecond) {
       const pps = parseFloat(formData.price_per_second);
@@ -270,13 +272,31 @@ export const ModelsPage = () => {
               />
             </div>
             
-            {editingModel.price_per_second != null ? (
+            <div className="flex items-center gap-3 py-1">
+              <span className="text-sm text-tg-hint">Тип цены:</span>
+              <button
+                type="button"
+                onClick={() => setFormData({ ...formData, is_per_second: false })}
+                className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${!formData.is_per_second ? 'bg-tg-button text-white' : 'bg-gray-100 text-gray-500'}`}
+              >
+                Фиксированная
+              </button>
+              <button
+                type="button"
+                onClick={() => setFormData({ ...formData, is_per_second: true })}
+                className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${formData.is_per_second ? 'bg-tg-button text-white' : 'bg-gray-100 text-gray-500'}`}
+              >
+                За секунду
+              </button>
+            </div>
+
+            {formData.is_per_second ? (
               <Input
                 label="Цена за 1 секунду (токенов)"
                 type="number"
                 value={formData.price_per_second}
                 onChange={(e) => setFormData({ ...formData, price_per_second: e.target.value })}
-                placeholder="например: 4"
+                placeholder="например: 1"
               />
             ) : (
               <Input
