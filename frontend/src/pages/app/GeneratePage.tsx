@@ -25,7 +25,7 @@ export default function GeneratePage() {
   const initialType = (searchParams.get('type') === 'video' ? 'video' : 'image') as GenerationType;
 
   const [activeType, setActiveType] = useState<GenerationType>(initialType);
-  const [selectedModel, setSelectedModel] = useState<AIModel | null>(null);
+  const [selectedModelId, setSelectedModelId] = useState<number | null>(null);
   const [prompt, setPrompt] = useState('');
   const [aspectRatio, setAspectRatio] = useState('1:1');
 
@@ -51,9 +51,6 @@ export default function GeneratePage() {
   const hasImage = !!uploadedImage;
   const hasVideo = !!uploadedVideo;
 
-  // Определяем является ли текущая модель motion control
-  const isMotionControl = selectedModel?.config?.mode === 'motion-control';
-
   // Фильтрация моделей по типу и наличию фото
   const currentModels = useMemo(() => {
     if (!modelsGrouped) return [];
@@ -62,17 +59,19 @@ export default function GeneratePage() {
       const allVideoModels = modelsGrouped.video || [];
 
       if (hasImage) {
-        // Есть фото — показываем image-to-video, motion-control, но НЕ text-to-video
+        // Есть фото — показываем image-to-video и motion-control
         return allVideoModels.filter(m =>
           m.config?.mode === 'image-to-video' ||
           m.config?.mode === 'motion-control' ||
           m.code.includes('-i2v')
         );
       } else {
-        // Нет фото — text-to-video + motion-control (он сам попросит загрузить файлы)
+        // Нет фото — показываем text-to-video и motion-control
+        // (motion-control сам попросит загрузить файлы)
         return allVideoModels.filter(m =>
-          m.config?.mode !== 'image-to-video' &&
-          !m.code.includes('-i2v')
+          m.config?.mode === 'text-to-video' ||
+          m.config?.mode === 'motion-control' ||
+          (!m.code.includes('-i2v') && m.config?.mode !== 'image-to-video')
         );
       }
     }
@@ -94,28 +93,30 @@ export default function GeneratePage() {
     return [];
   }, [modelsGrouped, activeType, hasImage]);
 
-  // Автовыбор модели при смене списка
+  // Derive selectedModel from selectedModelId + currentModels
+  const selectedModel = useMemo(() => {
+    if (!selectedModelId) return null;
+    return currentModels.find(m => m.id === selectedModelId) || null;
+  }, [selectedModelId, currentModels]);
+
+  // Определяем является ли текущая модель motion control
+  const isMotionControl = selectedModel?.config?.mode === 'motion-control';
+
+  // Автовыбор модели при смене списка — только если текущая модель не в списке
   useEffect(() => {
     if (currentModels.length === 0) {
-      setSelectedModel(null);
+      setSelectedModelId(null);
       return;
     }
-    // Если текущая выбранная модель есть в новом списке — не трогаем
-    const stillExists = selectedModel && currentModels.find(m => m.id === selectedModel.id);
-    if (stillExists) return;
 
-    // Если была выбрана motion-control — ищем её в новом списке по режиму
-    if (selectedModel?.config?.mode === 'motion-control') {
-      const motionModel = currentModels.find(m => m.config?.mode === 'motion-control');
-      if (motionModel) {
-        setSelectedModel(motionModel);
-        return;
-      }
+    // Если текущая выбранная модель есть в новом списке — не трогаем
+    if (selectedModelId && currentModels.some(m => m.id === selectedModelId)) {
+      return;
     }
 
-    // Иначе выбираем первую
-    setSelectedModel(currentModels[0]);
-  }, [currentModels, activeType]);
+    // Текущая модель не в списке — выбираем первую
+    setSelectedModelId(currentModels[0].id);
+  }, [currentModels, selectedModelId]);
 
   // Сброс aspect ratio при смене модели
   useEffect(() => {
@@ -280,7 +281,7 @@ export default function GeneratePage() {
     setUploadedImageUrl(null);
     setUploadedVideo(null);
     setUploadedVideoUrl(null);
-    setSelectedModel(null);
+    setSelectedModelId(null);
   };
 
   const aspectRatios = selectedModel?.config?.aspect_ratios || ['1:1', '16:9', '9:16'];
@@ -429,7 +430,7 @@ export default function GeneratePage() {
 
           {/* Кнопки загрузки */}
           <div className="absolute bottom-3 right-3 flex gap-2">
-            {/* Кнопка загрузки видео (только если фото загружено и тип — видео) */}
+            {/* Кнопка загрузки видео (только если тип — видео) */}
             {showVideoUpload && (
               <button
                 onClick={() => videoInputRef.current?.click()}
@@ -508,7 +509,7 @@ export default function GeneratePage() {
                     <button
                       key={model.id}
                       onClick={() => {
-                        setSelectedModel(model);
+                        setSelectedModelId(model.id);
                         setIsModelDropdownOpen(false);
                       }}
                       className={`w-full flex items-center gap-2 p-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700 text-sm transition-colors ${
