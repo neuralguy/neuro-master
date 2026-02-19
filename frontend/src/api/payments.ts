@@ -2,19 +2,19 @@ import apiClient from './client';
 import type { Payment, PaymentPackagesResponse } from '@/types';
 
 export const paymentsApi = {
-  getPackages: async (): Promise<PaymentPackagesResponse> => {
-    const { data } = await apiClient.get('/api/v1/payments/packages');
+  getPackages: async (currency: string = 'USD'): Promise<PaymentPackagesResponse> => {
+    const { data } = await apiClient.get('/api/v1/payments/packages', { params: { currency } });
     return data;
   },
 
-  create: async (packageId: string): Promise<{
+  create: async (packageId: string, currency: string = 'USD'): Promise<{
     payment_id: string;
     amount: number;
     tokens: number;
     package_name: string;
     confirmation_url: string;
   }> => {
-    const { data } = await apiClient.post('/api/v1/payments', { package_id: packageId });
+    const { data } = await apiClient.post('/api/v1/payments', { package_id: packageId, currency });
     return data;
   },
 

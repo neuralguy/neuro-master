@@ -20,6 +20,7 @@ class PaymentPackagesResponse(BaseModel):
 
 class PaymentCreateRequest(BaseModel):
     package_id: str = Field(..., description="ID пакета: standard, vip, premium, platinum")
+    currency: str = Field(default="USD", description="Валюта оплаты: USD или RUB")
 
 
 class PaymentCreateResponse(BaseModel):

@@ -15,17 +15,18 @@ from src.api.schemas.payment import (
 )
 from src.core.exceptions import PaymentError
 from src.modules.payments.service import PaymentService
-from src.shared.constants import PAYMENT_PACKAGES, PAYMENT_CURRENCY
+from src.shared.constants import PAYMENT_PACKAGES_USD, PAYMENT_PACKAGES_RUB, PAYMENT_CURRENCY
 from src.shared.enums import PaymentStatus
 
 router = APIRouter()
 
 @router.get("/packages", response_model=PaymentPackagesResponse)
-async def get_payment_packages() -> PaymentPackagesResponse:
+async def get_payment_packages(currency: str = "USD") -> PaymentPackagesResponse:
     """Get available payment packages (public endpoint)."""
+    packages = PAYMENT_PACKAGES_RUB if currency.upper() == "RUB" else PAYMENT_PACKAGES_USD
     return PaymentPackagesResponse(
-        packages=[PaymentPackageItem(**pkg) for pkg in PAYMENT_PACKAGES],
-        currency=PAYMENT_CURRENCY,
+        packages=[PaymentPackageItem(**pkg) for pkg in packages],
+        currency=currency.upper(),
     )
 
 @router.post("", response_model=PaymentCreateResponse, status_code=status.HTTP_201_CREATED)
@@ -35,8 +36,11 @@ async def create_payment(
     session: SessionDep,
 ) -> PaymentCreateResponse:
     """Create new payment by package ID."""
+    currency = request.currency.upper() if request.currency else "USD"
+    packages = PAYMENT_PACKAGES_RUB if currency == "RUB" else PAYMENT_PACKAGES_USD
+
     package = next(
-        (pkg for pkg in PAYMENT_PACKAGES if pkg["id"] == request.package_id),
+        (pkg for pkg in packages if pkg["id"] == request.package_id),
         None,
     )
     if not package:
@@ -53,6 +57,7 @@ async def create_payment(
             amount=package["amount"],
             tokens=package["tokens"],
             package_name=package["name"],
+            currency=currency,
         )
 
         return PaymentCreateResponse(

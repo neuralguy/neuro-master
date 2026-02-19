@@ -45,7 +45,7 @@ class PaymentService:
             raise PaymentError(f"Lava.top API error: {response.status_code}")
         return response.json()
 
-    async def create_payment(self, user_id: int, amount: int, tokens: int, package_name: str) -> tuple[Payment, str]:
+    async def create_payment(self, user_id: int, amount: int, tokens: int, package_name: str, currency: str | None = None) -> tuple[Payment, str]:
         """
         Create new payment via Lava.top.
 
@@ -78,11 +78,11 @@ class PaymentService:
 
             result = await self._lava_request(
                 "POST",
-                "/api/v2/invoice",                    # <-- ИСПРАВЛЕНО: было /api/v3/invoice
+                "/api/v2/invoice",
                 json={
                     "offerId": package["offer_id"],
                     "email": buyer_email,
-                    "currency": self.lava_currency,
+                    "currency": currency or self.lava_currency,
                     "buyerLanguage": "RU",
                 },
             )

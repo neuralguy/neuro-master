@@ -20,16 +20,19 @@ const PACKAGE_STYLES: Record<string, { gradient: string; icon: string }> = {
   platinum: { gradient: 'from-gray-600 to-gray-800',     icon: '🏆' },
 };
 
+type Currency = 'USD' | 'RUB';
+
 export const BalancePage = () => {
   const [pendingPaymentId, setPendingPaymentId] = useState<string | null>(null);
   const [pendingPaymentUrl, setPendingPaymentUrl] = useState<string | null>(null);
   const [pendingPackageName, setPendingPackageName] = useState<string | null>(null);
+  const [currency, setCurrency] = useState<Currency>('USD');
 
   const { user, updateBalance } = useUser();
 
   const { data: packagesData, isLoading: packagesLoading, isError: packagesError, refetch: refetchPackages } = useQuery({
-    queryKey: ['payment-packages'],
-    queryFn: paymentsApi.getPackages,
+    queryKey: ['payment-packages', currency],
+    queryFn: () => paymentsApi.getPackages(currency),
     staleTime: 5 * 60 * 1000,
     retry: 2,
   });
@@ -40,7 +43,7 @@ export const BalancePage = () => {
   });
 
   const createPaymentMutation = useMutation({
-    mutationFn: (packageId: string) => paymentsApi.create(packageId),
+    mutationFn: (packageId: string) => paymentsApi.create(packageId, currency),
     onSuccess: (data) => {
       hapticFeedback.success();
       setPendingPaymentId(data.payment_id);
@@ -136,7 +139,31 @@ export const BalancePage = () => {
 
       {/* Payment Packages */}
       <div className="space-y-3">
-        <h2 className="text-lg font-semibold text-tg-text">Пополнить баланс</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-tg-text">Пополнить баланс</h2>
+          <div className="flex items-center bg-tg-secondary-bg rounded-xl p-1 gap-1">
+            <button
+              onClick={() => setCurrency('USD')}
+              className={`px-3 py-1 rounded-lg text-sm font-medium transition-all ${
+                currency === 'USD'
+                  ? 'bg-blue-500 text-white shadow-sm'
+                  : 'text-tg-hint'
+              }`}
+            >
+              $ USD
+            </button>
+            <button
+              onClick={() => setCurrency('RUB')}
+              className={`px-3 py-1 rounded-lg text-sm font-medium transition-all ${
+                currency === 'RUB'
+                  ? 'bg-blue-500 text-white shadow-sm'
+                  : 'text-tg-hint'
+              }`}
+            >
+              ₽ RUB
+            </button>
+          </div>
+        </div>
 
         {packagesLoading ? (
           <Loader text="Загрузка пакетов..." />
@@ -158,7 +185,7 @@ export const BalancePage = () => {
           <div className="grid grid-cols-2 gap-3">
             {packages.map((pkg) => {
               const style = PACKAGE_STYLES[pkg.id] || { gradient: 'from-blue-500 to-blue-600', icon: '⭐' };
-              const tokensPerDollar = Math.round(pkg.tokens / pkg.amount);
+              const tokensPerUnit = Math.round(pkg.tokens / pkg.amount);
 
               return (
                 <button
@@ -169,14 +196,16 @@ export const BalancePage = () => {
                 >
                   <div className="text-2xl mb-2">{style.icon}</div>
                   <div className="font-bold text-base">{pkg.name}</div>
-                  <div className="text-2xl font-bold mt-1">${pkg.amount}</div>
+                  <div className="text-2xl font-bold mt-1">
+                    {currency === 'RUB' ? `${pkg.amount} ₽` : `$${pkg.amount}`}
+                  </div>
                   <div className="flex items-center gap-1 mt-2 text-sm text-white/80">
                     <Sparkles className="w-3.5 h-3.5" />
                     <span>{pkg.tokens} токенов</span>
                   </div>
-                  {tokensPerDollar > 0 && (
+                  {tokensPerUnit > 0 && (
                     <div className="mt-1 text-xs text-white/60">
-                      ~{tokensPerDollar} токенов/$
+                      ~{tokensPerUnit} токенов/{currency === 'RUB' ? '₽' : '$'}
                     </div>
                   )}
                 </button>
