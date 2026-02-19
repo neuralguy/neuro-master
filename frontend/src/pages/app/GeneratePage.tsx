@@ -1,6 +1,6 @@
 // frontend/src/pages/app/GeneratePage.tsx
 
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Upload, X, ChevronDown, ImageIcon, VideoIcon, Paperclip, Loader2, Gift, Users, Film } from 'lucide-react';
@@ -13,6 +13,56 @@ import { useUser } from '@/hooks/useUser';
 import { useTelegram } from '@/hooks/useTelegram';
 import type { AIModel, GenerationType, AIModelsGrouped } from '@/types';
 
+/**
+ * Given the full list of models for a type, filter based on
+ * whether the user has uploaded an image.
+ *
+ * Key rule: motion-control is ALWAYS shown for video tab,
+ * regardless of hasImage.
+ */
+function filterModels(
+  allModels: AIModel[],
+  activeType: GenerationType,
+  hasImage: boolean,
+): AIModel[] {
+  if (activeType === 'video') {
+    if (hasImage) {
+      // Has image: show image-to-video + motion-control
+      return allModels.filter(m => {
+        const mode = m.config?.mode;
+        return (
+          mode === 'image-to-video' ||
+          mode === 'motion-control' ||
+          m.code.includes('-i2v')
+        );
+      });
+    } else {
+      // No image: show text-to-video + motion-control
+      return allModels.filter(m => {
+        const mode = m.config?.mode;
+        if (mode === 'motion-control') return true;
+        if (mode === 'image-to-video') return false;
+        if (m.code.includes('-i2v')) return false;
+        return true;
+      });
+    }
+  }
+
+  if (activeType === 'image') {
+    if (hasImage) {
+      return allModels.filter(m =>
+        m.code.includes('-edit') || m.config?.mode === 'image-to-image'
+      );
+    } else {
+      return allModels.filter(m =>
+        !m.code.includes('-edit') && m.config?.mode !== 'image-to-image'
+      );
+    }
+  }
+
+  return [];
+}
+
 export default function GeneratePage() {
   const { user, updateBalance } = useUser();
   const { tg } = useTelegram();
@@ -21,7 +71,6 @@ export default function GeneratePage() {
   const videoInputRef = useRef<HTMLInputElement>(null);
   const [searchParams] = useSearchParams();
 
-  // Read initial type from URL query param (?type=image or ?type=video)
   const initialType = (searchParams.get('type') === 'video' ? 'video' : 'image') as GenerationType;
 
   const [activeType, setActiveType] = useState<GenerationType>(initialType);
@@ -34,7 +83,7 @@ export default function GeneratePage() {
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
 
-  // Video upload state (for motion control)
+  // Video upload state
   const [uploadedVideo, setUploadedVideo] = useState<string | null>(null);
   const [uploadedVideoUrl, setUploadedVideoUrl] = useState<string | null>(null);
   const [isUploadingVideo, setIsUploadingVideo] = useState(false);
@@ -47,89 +96,78 @@ export default function GeneratePage() {
     queryFn: modelsApi.getGrouped,
   });
 
-  // Определяем есть ли загруженное фото и видео
   const hasImage = !!uploadedImage;
   const hasVideo = !!uploadedVideo;
 
-  // Фильтрация моделей по типу и наличию фото
-  const currentModels = useMemo(() => {
+  // All models for current type (unfiltered by hasImage)
+  const allModelsForType = useMemo(() => {
     if (!modelsGrouped) return [];
-
-    if (activeType === 'video') {
-      const allVideoModels = modelsGrouped.video || [];
-
-      if (hasImage) {
-        // Есть фото — показываем image-to-video и motion-control
-        return allVideoModels.filter(m =>
-          m.config?.mode === 'image-to-video' ||
-          m.config?.mode === 'motion-control' ||
-          m.code.includes('-i2v')
-        );
-      } else {
-        // Нет фото — показываем text-to-video и motion-control
-        // (motion-control сам попросит загрузить файлы)
-        return allVideoModels.filter(m =>
-          m.config?.mode === 'text-to-video' ||
-          m.config?.mode === 'motion-control' ||
-          (!m.code.includes('-i2v') && m.config?.mode !== 'image-to-video')
-        );
-      }
-    }
-
-    if (activeType === 'image') {
-      const allImageModels = modelsGrouped.image || [];
-
-      if (hasImage) {
-        return allImageModels.filter(m =>
-          m.code.includes('-edit') || m.config?.mode === 'image-to-image'
-        );
-      } else {
-        return allImageModels.filter(m =>
-          !m.code.includes('-edit') && m.config?.mode !== 'image-to-image'
-        );
-      }
-    }
-
+    if (activeType === 'video') return modelsGrouped.video || [];
+    if (activeType === 'image') return modelsGrouped.image || [];
     return [];
-  }, [modelsGrouped, activeType, hasImage]);
+  }, [modelsGrouped, activeType]);
 
-  // Derive selectedModel from selectedModelId + currentModels
+  // Filtered models based on hasImage
+  const currentModels = useMemo(
+    () => filterModels(allModelsForType, activeType, hasImage),
+    [allModelsForType, activeType, hasImage],
+  );
+
+  // Derive selectedModel from ID
   const selectedModel = useMemo(() => {
-    if (!selectedModelId) return null;
-    return currentModels.find(m => m.id === selectedModelId) || null;
+    if (selectedModelId == null) return null;
+    return currentModels.find(m => m.id === selectedModelId) ?? null;
   }, [selectedModelId, currentModels]);
 
-  // Определяем является ли текущая модель motion control
   const isMotionControl = selectedModel?.config?.mode === 'motion-control';
 
-  // Автовыбор модели при смене списка — только если текущая модель не в списке
+  // ------------------------------------------------------------------
+  // Auto-select logic: only pick a new model when current selection
+  // is NOT present in the filtered list.
+  // We use a ref to avoid stale closure issues in useEffect.
+  // ------------------------------------------------------------------
+  const selectedModelIdRef = useRef(selectedModelId);
+  selectedModelIdRef.current = selectedModelId;
+
   useEffect(() => {
     if (currentModels.length === 0) {
-      setSelectedModelId(null);
+      if (selectedModelIdRef.current !== null) {
+        setSelectedModelId(null);
+      }
       return;
     }
 
-    // Если текущая выбранная модель есть в новом списке — не трогаем
-    if (selectedModelId && currentModels.some(m => m.id === selectedModelId)) {
+    const currentId = selectedModelIdRef.current;
+
+    // If current selection still exists in the list — keep it
+    if (currentId != null && currentModels.some(m => m.id === currentId)) {
       return;
     }
 
-    // Текущая модель не в списке — выбираем первую
+    // Otherwise pick the first model
     setSelectedModelId(currentModels[0].id);
-  }, [currentModels, selectedModelId]);
+  }, [currentModels]);
 
-  // Сброс aspect ratio при смене модели
+  // Reset aspect ratio when model changes
   useEffect(() => {
     if (selectedModel?.config?.aspect_ratios?.length) {
       setAspectRatio(selectedModel.config.aspect_ratios[0]);
     } else {
       setAspectRatio('1:1');
     }
-  }, [selectedModel]);
+  }, [selectedModel?.id]); // depend on id, not the whole object
 
+  // ------------------------------------------------------------------
+  // Generation mutation
+  // ------------------------------------------------------------------
   const generation = useMutation({
-    mutationFn: (request: { model_code: string; prompt?: string; image_url?: string; video_url?: string; aspect_ratio?: string }) =>
-      generationApi.create(request),
+    mutationFn: (request: {
+      model_code: string;
+      prompt?: string;
+      image_url?: string;
+      video_url?: string;
+      aspect_ratio?: string;
+    }) => generationApi.create(request),
     onSuccess: () => {
       tg?.HapticFeedback?.notificationOccurred('success');
       alert('Генерация запущена! Результат появится в галерее.');
@@ -148,6 +186,9 @@ export default function GeneratePage() {
     },
   });
 
+  // ------------------------------------------------------------------
+  // Upload handlers
+  // ------------------------------------------------------------------
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -157,14 +198,12 @@ export default function GeneratePage() {
       return;
     }
 
-    // Показываем превью сразу
     const reader = new FileReader();
     reader.onload = (event) => {
       setUploadedImage(event.target?.result as string);
     };
     reader.readAsDataURL(file);
 
-    // Загружаем на сервер
     setIsUploadingImage(true);
     try {
       const response = await uploadApi.uploadFile(file);
@@ -186,11 +225,9 @@ export default function GeneratePage() {
       return;
     }
 
-    // Показываем превью как URL
     const videoObjectUrl = URL.createObjectURL(file);
     setUploadedVideo(videoObjectUrl);
 
-    // Загружаем на сервер
     setIsUploadingVideo(true);
     try {
       const response = await uploadApi.uploadFile(file);
@@ -206,33 +243,26 @@ export default function GeneratePage() {
   const removeImage = () => {
     setUploadedImage(null);
     setUploadedImageUrl(null);
-    if (imageInputRef.current) {
-      imageInputRef.current.value = '';
-    }
-    // Если убрали фото, убираем и видео (motion control невозможен)
-    if (uploadedVideo) {
-      removeVideo();
-    }
+    if (imageInputRef.current) imageInputRef.current.value = '';
+    if (uploadedVideo) removeVideo();
   };
 
   const removeVideo = () => {
-    if (uploadedVideo) {
-      URL.revokeObjectURL(uploadedVideo);
-    }
+    if (uploadedVideo) URL.revokeObjectURL(uploadedVideo);
     setUploadedVideo(null);
     setUploadedVideoUrl(null);
-    if (videoInputRef.current) {
-      videoInputRef.current.value = '';
-    }
+    if (videoInputRef.current) videoInputRef.current.value = '';
   };
 
+  // ------------------------------------------------------------------
+  // Submit
+  // ------------------------------------------------------------------
   const handleSubmit = async () => {
     if (!selectedModel) {
       alert('Выберите модель');
       return;
     }
 
-    // Валидация для motion control
     if (isMotionControl) {
       if (!uploadedImageUrl && !uploadedVideoUrl) {
         alert('Для Motion Control необходимо загрузить фото персонажа и референсное видео с движением');
@@ -255,12 +285,10 @@ export default function GeneratePage() {
       alert('Дождитесь загрузки изображения');
       return;
     }
-
     if (hasVideo && !uploadedVideoUrl) {
       alert('Дождитесь загрузки видео');
       return;
     }
-
     if (user && selectedModel && user.balance < selectedModel.price_tokens) {
       alert('Недостаточно токенов');
       return;
@@ -275,6 +303,9 @@ export default function GeneratePage() {
     });
   };
 
+  // ------------------------------------------------------------------
+  // Tab change — full reset
+  // ------------------------------------------------------------------
   const handleTypeChange = (type: GenerationType) => {
     setActiveType(type);
     setUploadedImage(null);
@@ -286,11 +317,7 @@ export default function GeneratePage() {
 
   const aspectRatios = selectedModel?.config?.aspect_ratios || ['1:1', '16:9', '9:16'];
 
-  const getDisplayName = (model: AIModel) => {
-    return model.name;
-  };
-
-  // Закрытие dropdown при клике вне
+  // Close dropdowns on outside click
   useEffect(() => {
     const handleClickOutside = () => {
       setIsModelDropdownOpen(false);
@@ -302,6 +329,9 @@ export default function GeneratePage() {
     }
   }, [isModelDropdownOpen, isRatioDropdownOpen]);
 
+  // ------------------------------------------------------------------
+  // Render
+  // ------------------------------------------------------------------
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -310,7 +340,6 @@ export default function GeneratePage() {
     );
   }
 
-  // Показывать кнопку загрузки видео всегда для вкладки видео
   const showVideoUpload = activeType === 'video';
 
   return (
@@ -344,7 +373,6 @@ export default function GeneratePage() {
       {/* Превью загруженных файлов */}
       {(uploadedImage || uploadedVideo) && (
         <div className="flex gap-3">
-          {/* Превью изображения */}
           {uploadedImage && (
             <div className="relative bg-gray-100 dark:bg-gray-800 rounded-2xl p-3 flex-1">
               <div className="text-xs text-gray-500 mb-2 font-medium">Изображение</div>
@@ -369,7 +397,6 @@ export default function GeneratePage() {
             </div>
           )}
 
-          {/* Превью видео */}
           {uploadedVideo && (
             <div className="relative bg-gray-100 dark:bg-gray-800 rounded-2xl p-3 flex-1">
               <div className="text-xs text-gray-500 mb-2 font-medium">Референс видео</div>
@@ -413,7 +440,6 @@ export default function GeneratePage() {
 
       {/* Основная карточка ввода */}
       <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm">
-        {/* Поле ввода с кнопками загрузки */}
         <div className="relative">
           <textarea
             value={prompt}
@@ -428,9 +454,7 @@ export default function GeneratePage() {
             className="w-full h-32 p-4 pr-24 bg-transparent text-gray-900 dark:text-white placeholder-gray-400 resize-none border-0 focus:ring-0 text-sm rounded-t-2xl"
           />
 
-          {/* Кнопки загрузки */}
           <div className="absolute bottom-3 right-3 flex gap-2">
-            {/* Кнопка загрузки видео (только если тип — видео) */}
             {showVideoUpload && (
               <button
                 onClick={() => videoInputRef.current?.click()}
@@ -446,7 +470,6 @@ export default function GeneratePage() {
               </button>
             )}
 
-            {/* Кнопка загрузки фото */}
             <button
               onClick={() => imageInputRef.current?.click()}
               disabled={isUploadingImage}
@@ -477,12 +500,9 @@ export default function GeneratePage() {
           />
         </div>
 
-        {/* Разделитель */}
         <div className="border-t border-gray-100 dark:border-gray-800" />
 
-        {/* Контролы */}
         <div className="p-3 flex gap-2">
-          {/* Выбор модели */}
           {currentModels.length > 0 && (
             <div className="relative flex-1">
               <button
@@ -495,7 +515,7 @@ export default function GeneratePage() {
               >
                 <span className="flex items-center gap-2 text-gray-900 dark:text-white">
                   {selectedModel?.icon && <span>{selectedModel.icon}</span>}
-                  <span className="truncate font-medium">{selectedModel ? getDisplayName(selectedModel) : 'Модель'}</span>
+                  <span className="truncate font-medium">{selectedModel ? selectedModel.name : 'Модель'}</span>
                 </span>
                 <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isModelDropdownOpen ? 'rotate-180' : ''}`} />
               </button>
@@ -513,12 +533,12 @@ export default function GeneratePage() {
                         setIsModelDropdownOpen(false);
                       }}
                       className={`w-full flex items-center gap-2 p-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700 text-sm transition-colors ${
-                        selectedModel?.id === model.id ? 'bg-blue-50 dark:bg-blue-900/30' : ''
+                        selectedModelId === model.id ? 'bg-blue-50 dark:bg-blue-900/30' : ''
                       }`}
                     >
                       {model.icon && <span className="text-lg">{model.icon}</span>}
                       <div className="flex-1 min-w-0">
-                        <span className="text-gray-900 dark:text-white font-medium block truncate">{getDisplayName(model)}</span>
+                        <span className="text-gray-900 dark:text-white font-medium block truncate">{model.name}</span>
                         {model.config?.mode === 'motion-control' && (
                           <span className="text-[10px] text-purple-500 font-medium">Motion Control</span>
                         )}
@@ -531,7 +551,6 @@ export default function GeneratePage() {
             </div>
           )}
 
-          {/* Выбор соотношения (не для motion control) */}
           {!isMotionControl && (
             <div className="relative">
               <button
@@ -582,7 +601,7 @@ export default function GeneratePage() {
         {generation.isPending ? 'Генерация...' : 'Сгенерировать'}
       </Button>
 
-      {/* Блок приглашения друзей — увеличенный */}
+      {/* Блок приглашения друзей */}
       <Card
         className="bg-gradient-to-br from-green-500 via-emerald-500 to-teal-600 text-white cursor-pointer active:scale-[0.98] transition-transform mt-2"
         onClick={() => navigate('/profile')}
