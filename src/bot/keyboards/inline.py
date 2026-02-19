@@ -28,7 +28,7 @@ def get_trending_prompts_keyboard() -> InlineKeyboardMarkup:
             [
                 InlineKeyboardButton(
                     text="🔥 Перейти в канал",
-                    url=TELEGRAM_CHANNEL_URL,
+                    url="https://t.me/aimakepromt",
                 ),
             ],
         ]

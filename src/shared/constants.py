@@ -14,7 +14,7 @@ TRENDING_PROMPTS_BUTTON_TEXT = "🔥 Трендовые промты"
 EARN_TOKENS_BUTTON_TEXT = "💎 Заработать токены"
 
 # === Telegram Channel ===
-TELEGRAM_CHANNEL_URL = "https://t.me/your_channel"
+TELEGRAM_CHANNEL_URL = "https://t.me/aimakepromt"
 
 # === Generation ===
 GENERATION_POLL_INTERVAL = 3
