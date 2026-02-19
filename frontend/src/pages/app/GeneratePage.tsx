@@ -62,19 +62,26 @@ export default function GeneratePage() {
       const allVideoModels = modelsGrouped.video || [];
 
       if (hasImage && hasVideo) {
-        // Показываем motion control модели
+        // Есть и фото и видео — показываем motion control + image-to-video
         return allVideoModels.filter(m =>
-          m.config?.mode === 'motion-control'
+          m.config?.mode === 'motion-control' ||
+          m.code.includes('-i2v') ||
+          m.config?.mode === 'image-to-video'
         );
       } else if (hasImage && !hasVideo) {
-        // Показываем image-to-video И motion-control модели
+        // Есть только фото — image-to-video и motion-control (motion-control потребует видео)
         return allVideoModels.filter(m =>
           m.code.includes('-i2v') ||
           m.config?.mode === 'image-to-video' ||
           m.config?.mode === 'motion-control'
         );
+      } else if (!hasImage && hasVideo) {
+        // Есть только видео — motion-control (фото ещё не загружено, но покажем)
+        return allVideoModels.filter(m =>
+          m.config?.mode === 'motion-control'
+        );
       } else {
-        // Только text-to-video (без фото)
+        // Ничего нет — text-to-video
         return allVideoModels.filter(m =>
           !m.code.includes('-i2v') &&
           m.config?.mode !== 'image-to-video' &&
@@ -105,7 +112,11 @@ export default function GeneratePage() {
     if (currentModels.length > 0) {
       const exists = selectedModel && currentModels.find(m => m.id === selectedModel.id);
       if (!exists) {
-        setSelectedModel(currentModels[0]);
+        // Если была выбрана motion-control — попробуем найти её в новом списке по режиму
+        const motionModel = selectedModel?.config?.mode === 'motion-control'
+          ? currentModels.find(m => m.config?.mode === 'motion-control')
+          : null;
+        setSelectedModel(motionModel || currentModels[0]);
       }
     } else {
       setSelectedModel(null);
@@ -228,12 +239,16 @@ export default function GeneratePage() {
 
     // Валидация для motion control
     if (isMotionControl) {
+      if (!uploadedImageUrl && !uploadedVideoUrl) {
+        alert('Для Motion Control необходимо загрузить фото персонажа и референсное видео с движением');
+        return;
+      }
       if (!uploadedImageUrl) {
-        alert('Для Motion Control необходимо загрузить изображение');
+        alert('Для Motion Control необходимо загрузить фото персонажа');
         return;
       }
       if (!uploadedVideoUrl) {
-        alert('Для Motion Control необходимо загрузить референсное видео');
+        alert('Для Motion Control необходимо загрузить референсное видео с движением');
         return;
       }
     } else if (!hasImage && !prompt.trim()) {
@@ -300,8 +315,8 @@ export default function GeneratePage() {
     );
   }
 
-  // Показывать ли кнопку загрузки видео: только для video-типа и если уже есть фото
-  const showVideoUpload = activeType === 'video' && hasImage;
+  // Показывать кнопку загрузки видео всегда для вкладки видео
+  const showVideoUpload = activeType === 'video';
 
   return (
     <div className="flex flex-col gap-4 p-4">
