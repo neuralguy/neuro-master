@@ -203,9 +203,9 @@ export const BalancePage = () => {
                     <Sparkles className="w-3.5 h-3.5" />
                     <span>{pkg.tokens} токенов</span>
                   </div>
-                  {tokensPerUnit > 0 && (
+                  {currency === 'RUB' && tokensPerUnit > 0 && (
                     <div className="mt-1 text-xs text-white/60">
-                      ~{tokensPerUnit} токенов/{currency === 'RUB' ? '₽' : '$'}
+                      ~{tokensPerUnit} токенов/₽
                     </div>
                   )}
                 </button>
