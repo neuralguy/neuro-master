@@ -34,7 +34,7 @@ class PaymentService:
         """Make request to Lava.top API."""
         url = f"{self.lava_api_url}{endpoint}"
         headers = {
-            "Authorization": self.lava_api_key,
+            "Authorization": f"Bearer {self.lava_api_key}",
             "Content-Type": "application/json",
             "Accept": "application/json",
         }
