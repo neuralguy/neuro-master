@@ -34,7 +34,7 @@ class PaymentService:
         """Make request to Lava.top API."""
         url = f"{self.lava_api_url}{endpoint}"
         headers = {
-            "Authorization": f"Bearer {self.lava_api_key}",
+            "X-Api-Key": self.lava_api_key,         # <-- ИСПРАВЛЕНО: было "Authorization: Bearer ..."
             "Content-Type": "application/json",
             "Accept": "application/json",
         }
@@ -78,7 +78,7 @@ class PaymentService:
 
             result = await self._lava_request(
                 "POST",
-                "/api/v3/invoice",
+                "/api/v2/invoice",                    # <-- ИСПРАВЛЕНО: было /api/v3/invoice
                 json={
                     "offerId": package["offer_id"],
                     "email": buyer_email,
@@ -133,7 +133,11 @@ class PaymentService:
 
         # Check status in Lava.top
         try:
-            result = await self._lava_request("GET", f"/api/v3/invoice/{payment.lava_id}")
+            result = await self._lava_request(
+                "GET",
+                f"/api/v1/invoice",                   # <-- ИСПРАВЛЕНО: было /api/v3/invoice/{id}
+                params={"id": payment.lava_id},        # <-- ИСПРАВЛЕНО: id через query params
+            )
             lava_status = result.get("status", "").lower()
 
             logger.debug(
@@ -141,11 +145,11 @@ class PaymentService:
                 f"status={lava_status}"
             )
 
-            if lava_status in ("succeeded", "completed", "paid"):
+            if lava_status in ("completed", "succeeded", "paid"):   # <-- ИСПРАВЛЕНО: "completed" — основной статус lava.top
                 new_balance = await self._process_successful_payment(payment)
                 return {"success": True, "status": "success", "new_balance": new_balance}
 
-            elif lava_status in ("canceled", "failed", "expired"):
+            elif lava_status in ("cancelled", "canceled", "failed", "expired"):
                 await self.payment_repo.mark_as_failed(payment.id, lava_status=lava_status)
                 return {"success": False, "status": lava_status}
 
@@ -168,7 +172,7 @@ class PaymentService:
         Returns:
             Updated Payment or None
         """
-        lava_id = payload.get("invoiceId") or payload.get("id")
+        lava_id = payload.get("invoiceId") or payload.get("id") or payload.get("contractId")
         status = (payload.get("status") or "").lower()
 
         if not lava_id:
@@ -189,16 +193,16 @@ class PaymentService:
             f"status={status}, payment_id={payment.id}"
         )
 
-        if status in ("succeeded", "completed", "paid"):
+        if status in ("completed", "succeeded", "paid"):
             await self._process_successful_payment(payment)
-        elif status in ("canceled", "failed", "expired"):
+        elif status in ("cancelled", "canceled", "failed", "expired"):
             await self.payment_repo.mark_as_failed(payment.id, lava_status=status)
 
         return payment
 
     async def _process_successful_payment(self, payment: Payment) -> int:
         """Process successful payment - add tokens to user."""
-        await self.payment_repo.mark_as_paid(payment.id, lava_status="succeeded")
+        await self.payment_repo.mark_as_paid(payment.id, lava_status="completed")
 
         new_balance = await self.user_repo.update_balance(payment.user_id, payment.tokens)
 
@@ -225,3 +229,4 @@ class PaymentService:
     async def get_stats(self) -> dict:
         """Get payment statistics."""
         return await self.payment_repo.get_stats()
+
