@@ -74,7 +74,7 @@ class PaymentService:
         try:
             # Get user for email placeholder
             user = await self.user_repo.get_by_id(user_id)
-            buyer_email = f"user_{user.telegram_id}@noreply.local"
+            buyer_email = f"user_{user.telegram_id}@noreply.com"
 
             result = await self._lava_request(
                 "POST",
