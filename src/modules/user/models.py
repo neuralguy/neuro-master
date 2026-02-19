@@ -79,9 +79,8 @@ class User(Base):
 
     @property
     def referral_code(self) -> str:
-        """Get referral code (base36 of user id)."""
-        import base64
-        return base64.b64encode(str(self.id).encode()).decode()[:8]
+        """Get referral code (ref_{telegram_id})."""
+        return f"ref_{self.telegram_id}"
 
     def __repr__(self) -> str:
         return f"<User id={self.id} telegram_id={self.telegram_id} username={self.username}>"
