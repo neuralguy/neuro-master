@@ -37,7 +37,43 @@ async def lifespan(app: FastAPI):
     
     # Enable WebSocket logging for admin panel
     enable_websocket_logging(level="DEBUG")
-    
+
+    # Resume pending/processing generations after restart
+    import asyncio
+    from src.core.database import async_session_maker
+    from src.modules.generation.repository import GenerationRepository
+    from src.modules.user.repository import UserRepository
+
+    async def resume_generations():
+        try:
+            async with async_session_maker() as session:
+                repo = GenerationRepository(session)
+                user_repo = UserRepository(session)
+                generations = await repo.get_pending_generations(limit=200)
+                if not generations:
+                    logger.info("No pending generations to resume")
+                    return
+                logger.info(f"Resuming {len(generations)} pending generations after restart")
+                from src.modules.generation.service import GenerationService
+                for gen in generations:
+                    provider_name = gen.params.get("_provider", "kie.ai")
+                    user = await user_repo.get_by_id(gen.user_id)
+                    telegram_id = user.telegram_id if user else None
+                    service = GenerationService(session)
+                    asyncio.create_task(
+                        service._poll_generation(
+                            gen.id,
+                            gen.kie_task_id,
+                            provider_name=provider_name,
+                            telegram_id=telegram_id,
+                        )
+                    )
+                    logger.info(f"Resumed polling | generation_id={gen.id}, task_id={gen.kie_task_id}")
+        except Exception as e:
+            logger.error(f"Failed to resume generations | error={e}")
+
+    asyncio.create_task(resume_generations())
+
     logger.info(f"Frontend dir exists: {FRONTEND_DIR.exists()}")
     logger.info("FastAPI started")
     
