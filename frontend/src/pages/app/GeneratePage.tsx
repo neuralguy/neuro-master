@@ -61,31 +61,18 @@ export default function GeneratePage() {
     if (activeType === 'video') {
       const allVideoModels = modelsGrouped.video || [];
 
-      if (hasImage && hasVideo) {
-        // Есть и фото и видео — показываем motion control + image-to-video
+      if (hasImage) {
+        // Есть фото — показываем image-to-video, motion-control, но НЕ text-to-video
         return allVideoModels.filter(m =>
-          m.config?.mode === 'motion-control' ||
-          m.code.includes('-i2v') ||
-          m.config?.mode === 'image-to-video'
-        );
-      } else if (hasImage && !hasVideo) {
-        // Есть только фото — image-to-video и motion-control (motion-control потребует видео)
-        return allVideoModels.filter(m =>
-          m.code.includes('-i2v') ||
           m.config?.mode === 'image-to-video' ||
-          m.config?.mode === 'motion-control'
-        );
-      } else if (!hasImage && hasVideo) {
-        // Есть только видео — motion-control (фото ещё не загружено, но покажем)
-        return allVideoModels.filter(m =>
-          m.config?.mode === 'motion-control'
+          m.config?.mode === 'motion-control' ||
+          m.code.includes('-i2v')
         );
       } else {
-        // Ничего нет — text-to-video
+        // Нет фото — text-to-video + motion-control (он сам попросит загрузить файлы)
         return allVideoModels.filter(m =>
-          !m.code.includes('-i2v') &&
           m.config?.mode !== 'image-to-video' &&
-          m.config?.mode !== 'motion-control'
+          !m.code.includes('-i2v')
         );
       }
     }
@@ -105,7 +92,7 @@ export default function GeneratePage() {
     }
 
     return [];
-  }, [modelsGrouped, activeType, hasImage, hasVideo]);
+  }, [modelsGrouped, activeType, hasImage]);
 
   // Автовыбор модели при смене списка
   useEffect(() => {
