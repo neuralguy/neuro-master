@@ -24,6 +24,7 @@ class AIModelResponse(BaseModel):
     description: str | None
     generation_type: GenerationType
     price_tokens: float
+    price_per_second: float | None = None
     is_enabled: bool
     config: AIModelConfig | dict
     icon: str | None
@@ -45,6 +46,7 @@ class AIModelUpdateRequest(BaseModel):
     name: str | None = None
     description: str | None = None
     price_tokens: float | None = None
+    price_per_second: float | None = None
     is_enabled: bool | None = None
     config: dict | None = None
     icon: str | None = None

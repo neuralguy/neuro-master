@@ -54,6 +54,7 @@ export interface AIModel {
   description: string | null;
   generation_type: 'image' | 'video';
   price_tokens: number;
+  price_per_second: number | null;
   is_enabled: boolean;
   config: AIModelConfig;
   icon: string | null;

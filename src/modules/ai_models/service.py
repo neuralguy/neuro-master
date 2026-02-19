@@ -322,9 +322,10 @@ DEFAULT_MODELS = [
         "provider": "poyo.ai",
         "provider_model": "veo3.1-fast",
         "generation_type": "video",
-        "price_tokens": 50,
+        "price_tokens": 8,  # фикс 8 сек, цена за секунду
+        "price_per_second": 8,
         "icon": "🎬",
-        "config": {"aspect_ratios": ["16:9", "9:16"], "mode": "text-to-video"},
+        "config": {"aspect_ratios": ["16:9", "9:16"], "durations": [8], "mode": "text-to-video"},
     },
     {
         "code": "veo3-quality",
@@ -333,9 +334,10 @@ DEFAULT_MODELS = [
         "provider": "poyo.ai",
         "provider_model": "veo3.1-quality",
         "generation_type": "video",
-        "price_tokens": 100,
+        "price_tokens": 8,  # фикс 8 сек, цена за секунду
+        "price_per_second": 8,
         "icon": "🎬",
-        "config": {"aspect_ratios": ["16:9", "9:16"], "mode": "text-to-video"},
+        "config": {"aspect_ratios": ["16:9", "9:16"], "durations": [8], "mode": "text-to-video"},
     },
     {
         "code": "kling-3.0-standard",
@@ -344,7 +346,8 @@ DEFAULT_MODELS = [
         "provider": "poyo.ai",
         "provider_model": "kling-3.0/standard",
         "generation_type": "video",
-        "price_tokens": 40,
+        "price_tokens": 4,  # цена за секунду
+        "price_per_second": 4,
         "icon": "🎞️",
         "config": {"aspect_ratios": ["16:9", "9:16", "1:1"], "durations": [3, 5, 10, 15], "mode": "text-to-video"},
     },
@@ -355,7 +358,8 @@ DEFAULT_MODELS = [
         "provider": "poyo.ai",
         "provider_model": "kling-3.0/pro",
         "generation_type": "video",
-        "price_tokens": 60,
+        "price_tokens": 6,  # цена за секунду
+        "price_per_second": 6,
         "icon": "🎞️",
         "config": {"aspect_ratios": ["16:9", "9:16", "1:1"], "durations": [3, 5, 10, 15], "mode": "text-to-video"},
     },
@@ -366,7 +370,8 @@ DEFAULT_MODELS = [
         "provider": "poyo.ai",
         "provider_model": "kling-2.6",
         "generation_type": "video",
-        "price_tokens": 35,
+        "price_tokens": 4,  # цена за секунду
+        "price_per_second": 4,
         "icon": "🎞️",
         "config": {"aspect_ratios": ["16:9", "9:16", "1:1"], "durations": [5, 10], "mode": "text-to-video"},
     },
@@ -377,7 +382,8 @@ DEFAULT_MODELS = [
         "provider": "poyo.ai",
         "provider_model": "sora-2",
         "generation_type": "video",
-        "price_tokens": 50,
+        "price_tokens": 5,  # цена за секунду
+        "price_per_second": 5,
         "icon": "🎥",
         "config": {"aspect_ratios": ["16:9", "9:16", "1:1"], "durations": [10, 15], "mode": "text-to-video"},
     },
@@ -388,7 +394,8 @@ DEFAULT_MODELS = [
         "provider": "poyo.ai",
         "provider_model": "sora-2-pro",
         "generation_type": "video",
-        "price_tokens": 80,
+        "price_tokens": 5,  # цена за секунду
+        "price_per_second": 5,
         "icon": "🎥",
         "config": {"aspect_ratios": ["16:9", "9:16", "1:1"], "durations": [15, 25], "mode": "text-to-video"},
     },
@@ -399,9 +406,10 @@ DEFAULT_MODELS = [
         "provider": "poyo.ai",
         "provider_model": "seedance-1.5-pro",
         "generation_type": "video",
-        "price_tokens": 35,
+        "price_tokens": 5,  # цена за секунду
+        "price_per_second": 5,
         "icon": "🌱",
-        "config": {"aspect_ratios": ["16:9", "9:16"], "mode": "text-to-video"},
+        "config": {"aspect_ratios": ["16:9", "9:16"], "durations": [4, 8, 12], "mode": "text-to-video"},
     },
     {
         "code": "hailuo-02-pro",
@@ -410,9 +418,10 @@ DEFAULT_MODELS = [
         "provider": "poyo.ai",
         "provider_model": "hailuo-02-pro",
         "generation_type": "video",
-        "price_tokens": 35,
+        "price_tokens": 6,  # фикс 6 сек, цена за секунду
+        "price_per_second": 6,
         "icon": "🌊",
-        "config": {"aspect_ratios": ["16:9", "9:16"], "mode": "text-to-video"},
+        "config": {"aspect_ratios": ["16:9", "9:16"], "durations": [6], "mode": "text-to-video"},
     },
     {
         "code": "wan-2.6",
@@ -421,7 +430,8 @@ DEFAULT_MODELS = [
         "provider": "poyo.ai",
         "provider_model": "wan2.6-text-to-video",
         "generation_type": "video",
-        "price_tokens": 25,
+        "price_tokens": 3,  # цена за секунду
+        "price_per_second": 3,
         "icon": "🎭",
         "config": {"aspect_ratios": ["16:9", "9:16"], "durations": [5, 10, 15], "mode": "text-to-video"},
     },
@@ -432,7 +442,8 @@ DEFAULT_MODELS = [
         "provider": "poyo.ai",
         "provider_model": "grok-imagine",
         "generation_type": "video",
-        "price_tokens": 30,
+        "price_tokens": 4,  # цена за секунду
+        "price_per_second": 4,
         "icon": "🚀",
         "config": {"aspect_ratios": ["1:1", "2:3", "3:2"], "durations": [6, 10], "mode": "text-to-video"},
     },
@@ -443,7 +454,8 @@ DEFAULT_MODELS = [
         "provider": "kie.ai",
         "provider_model": "runway",
         "generation_type": "video",
-        "price_tokens": 45,
+        "price_tokens": 6,  # цена за секунду
+        "price_per_second": 6,
         "icon": "🛫",
         "config": {"aspect_ratios": ["16:9", "9:16", "1:1", "4:3", "3:4"], "durations": [5, 10], "mode": "text-to-video"},
     },
@@ -456,9 +468,10 @@ DEFAULT_MODELS = [
         "provider": "poyo.ai",
         "provider_model": "veo3.1-fast",
         "generation_type": "video",
-        "price_tokens": 50,
+        "price_tokens": 8,  # фикс 8 сек, цена за секунду
+        "price_per_second": 8,
         "icon": "🎬",
-        "config": {"aspect_ratios": ["16:9", "9:16"], "mode": "image-to-video"},
+        "config": {"aspect_ratios": ["16:9", "9:16"], "durations": [8], "mode": "image-to-video"},
     },
     {
         "code": "kling-3.0-standard-i2v",
@@ -467,7 +480,8 @@ DEFAULT_MODELS = [
         "provider": "poyo.ai",
         "provider_model": "kling-3.0/standard",
         "generation_type": "video",
-        "price_tokens": 40,
+        "price_tokens": 4,  # цена за секунду
+        "price_per_second": 4,
         "icon": "🎞️",
         "config": {"aspect_ratios": ["16:9", "9:16", "1:1"], "durations": [3, 5, 10, 15], "mode": "image-to-video"},
     },
@@ -478,7 +492,8 @@ DEFAULT_MODELS = [
         "provider": "kie.ai",
         "provider_model": "kling-2.6/image-to-video",
         "generation_type": "video",
-        "price_tokens": 35,
+        "price_tokens": 4,  # цена за секунду
+        "price_per_second": 4,
         "icon": "🎞️",
         "config": {"aspect_ratios": ["16:9", "9:16", "1:1"], "durations": [5, 10], "mode": "image-to-video"},
     },
@@ -489,9 +504,10 @@ DEFAULT_MODELS = [
         "provider": "poyo.ai",
         "provider_model": "sora-2",
         "generation_type": "video",
-        "price_tokens": 50,
+        "price_tokens": 5,  # цена за секунду
+        "price_per_second": 5,
         "icon": "🎥",
-        "config": {"aspect_ratios": ["16:9", "9:16", "1:1"], "mode": "image-to-video"},
+        "config": {"aspect_ratios": ["16:9", "9:16", "1:1"], "durations": [10, 15], "mode": "image-to-video"},
     },
     {
         "code": "seedance-1.5-pro-i2v",
@@ -500,9 +516,10 @@ DEFAULT_MODELS = [
         "provider": "poyo.ai",
         "provider_model": "seedance-1.5-pro",
         "generation_type": "video",
-        "price_tokens": 35,
+        "price_tokens": 5,  # цена за секунду
+        "price_per_second": 5,
         "icon": "🌱",
-        "config": {"aspect_ratios": ["16:9", "9:16"], "mode": "image-to-video"},
+        "config": {"aspect_ratios": ["16:9", "9:16"], "durations": [4, 8, 12], "mode": "image-to-video"},
     },
     {
         "code": "wan-2.6-i2v",
@@ -511,7 +528,8 @@ DEFAULT_MODELS = [
         "provider": "poyo.ai",
         "provider_model": "wan2.6-image-to-video",
         "generation_type": "video",
-        "price_tokens": 25,
+        "price_tokens": 3,  # цена за секунду
+        "price_per_second": 3,
         "icon": "🎭",
         "config": {"aspect_ratios": ["16:9", "9:16"], "durations": [5, 10, 15], "mode": "image-to-video"},
     },
@@ -522,9 +540,10 @@ DEFAULT_MODELS = [
         "provider": "kie.ai",
         "provider_model": "hailuo/02-image-to-video-pro",
         "generation_type": "video",
-        "price_tokens": 35,
+        "price_tokens": 6,  # цена за секунду
+        "price_per_second": 6,
         "icon": "🌊",
-        "config": {"aspect_ratios": ["16:9", "9:16"], "mode": "image-to-video"},
+        "config": {"aspect_ratios": ["16:9", "9:16"], "durations": [6, 10], "mode": "image-to-video"},
     },
     {
         "code": "grok-imagine-i2v",
@@ -533,7 +552,8 @@ DEFAULT_MODELS = [
         "provider": "poyo.ai",
         "provider_model": "grok-imagine",
         "generation_type": "video",
-        "price_tokens": 30,
+        "price_tokens": 4,  # цена за секунду
+        "price_per_second": 4,
         "icon": "🚀",
         "config": {"aspect_ratios": ["1:1", "2:3", "3:2"], "durations": [6, 10], "mode": "image-to-video"},
     },
@@ -544,7 +564,8 @@ DEFAULT_MODELS = [
         "provider": "kie.ai",
         "provider_model": "runway",
         "generation_type": "video",
-        "price_tokens": 45,
+        "price_tokens": 6,  # цена за секунду
+        "price_per_second": 6,
         "icon": "🛫",
         "config": {"aspect_ratios": ["16:9", "9:16", "1:1", "4:3", "3:4"], "durations": [5, 10], "mode": "image-to-video"},
     },
@@ -591,6 +612,11 @@ async def seed_default_models(session: AsyncSession) -> None:
                     changed = True
             if existing.config != model_data.get("config"):
                 existing.config = model_data.get("config")
+                changed = True
+            # Sync price_per_second from DEFAULT_MODELS (not admin-managed)
+            new_pps = model_data.get("price_per_second")
+            if existing.price_per_second != new_pps:
+                existing.price_per_second = new_pps
                 changed = True
             if existing.sort_order != i:
                 existing.sort_order = i

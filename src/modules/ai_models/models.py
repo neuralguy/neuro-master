@@ -33,6 +33,8 @@ class AIModel(Base):
     
     # Pricing
     price_tokens: Mapped[float] = mapped_column(Float, nullable=False, default=10.0)
+    price_per_second: Mapped[float | None] = mapped_column(Float, nullable=True)
+    # If price_per_second is set, the total cost = price_per_second * duration (for video models)
     
     # Status
     is_enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)

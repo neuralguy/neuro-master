@@ -88,15 +88,21 @@ class GenerationService:
         if not user:
             raise NotFoundError("Пользователь", user_id)
 
-        if user.balance < model.price_tokens:
+        # Calculate cost: if model has price_per_second and duration provided — multiply
+        if model.price_per_second is not None and duration is not None:
+            cost = model.price_per_second * duration
+        else:
+            cost = model.price_tokens
+
+        if user.balance < cost:
             raise InsufficientBalanceError(
-                required=model.price_tokens,
+                required=cost,
                 available=user.balance,
             )
 
         # Deduct tokens
         new_balance = await self.user_repo.update_balance(
-            user_id, -model.price_tokens
+            user_id, -cost
         )
 
         # Create generation record
@@ -104,7 +110,7 @@ class GenerationService:
             user_id=user_id,
             model_id=model.id,
             generation_type=model.generation_type,
-            tokens_spent=model.price_tokens,
+            tokens_spent=cost,
             prompt=prompt,
             input_file_url=image_url,
             params={
@@ -134,7 +140,7 @@ class GenerationService:
                 user.telegram_id,
                 f"{gen_type_text} генерируется...\n\n"
                 f"🤖 Модель: <b>{model.name}</b>\n"
-                f"💰 Списано: <b>{model.price_tokens} токенов</b>\n\n"
+                f"💰 Списано: <b>{int(cost)} токенов</b>\n\n"
                 f"⏳ Обычно занимает до 2 минут. Результат придёт сюда автоматически.",
                 parse_mode="HTML",
             )

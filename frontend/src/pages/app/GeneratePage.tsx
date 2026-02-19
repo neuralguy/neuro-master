@@ -75,6 +75,8 @@ export default function GeneratePage() {
   const [selectedModelId, setSelectedModelId] = useState<number | null>(null);
   const [prompt, setPrompt] = useState('');
   const [aspectRatio, setAspectRatio] = useState('1:1');
+  const [duration, setDuration] = useState<number | null>(null);
+  const [isDurationDropdownOpen, setIsDurationDropdownOpen] = useState(false);
 
   // Image upload
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
@@ -162,7 +164,7 @@ export default function GeneratePage() {
     setSelectedModelId(currentModels[0].id);
   }, [currentModels]);
 
-  // Reset aspect ratio when selected model changes
+  // Reset aspect ratio and duration when selected model changes
   const prevSelectedModelIdRef = useRef<number | null>(null);
   useEffect(() => {
     if (selectedModel && selectedModel.id !== prevSelectedModelIdRef.current) {
@@ -172,8 +174,24 @@ export default function GeneratePage() {
       } else {
         setAspectRatio('1:1');
       }
+      // Set default duration for video models
+      const durations = selectedModel.config?.durations;
+      if (durations && durations.length > 0) {
+        setDuration(durations[0]);
+      } else {
+        setDuration(null);
+      }
     }
   }, [selectedModel]);
+
+  // Calculate cost based on price_per_second and selected duration
+  const currentCost = (() => {
+    if (!selectedModel) return 0;
+    if (selectedModel.price_per_second != null && duration != null) {
+      return Math.round(selectedModel.price_per_second * duration);
+    }
+    return selectedModel.price_tokens;
+  })();
 
   // ── generation mutation ────────────────────────────────
   const generation = useMutation({
@@ -183,12 +201,13 @@ export default function GeneratePage() {
       image_url?: string;
       video_url?: string;
       aspect_ratio?: string;
+      duration?: number;
     }) => generationApi.create(request),
     onSuccess: () => {
       tg?.HapticFeedback?.notificationOccurred('success');
       alert('Генерация запущена! Результат появится в галерее.');
-      if (user && selectedModel) {
-        updateBalance(user.balance - selectedModel.price_tokens);
+      if (user) {
+        updateBalance(user.balance - currentCost);
       }
       setPrompt('');
       setUploadedImage(null);
@@ -261,7 +280,7 @@ export default function GeneratePage() {
 
     if (hasImage && !uploadedImageUrl) { alert('Дождитесь загрузки изображения'); return; }
     if (hasVideo && !uploadedVideoUrl) { alert('Дождитесь загрузки видео'); return; }
-    if (user && selectedModel && user.balance < selectedModel.price_tokens) { alert('Недостаточно токенов'); return; }
+    if (user && user.balance < currentCost) { alert('Недостаточно токенов'); return; }
 
     generation.mutate({
       model_code: selectedModel.code,
@@ -269,6 +288,7 @@ export default function GeneratePage() {
       image_url: uploadedImageUrl || undefined,
       video_url: uploadedVideoUrl || undefined,
       aspect_ratio: aspectRatio,
+      duration: duration ?? undefined,
     });
   };
 
@@ -283,14 +303,16 @@ export default function GeneratePage() {
   };
 
   const aspectRatios = selectedModel?.config?.aspect_ratios || ['1:1', '16:9', '9:16'];
+  const availableDurations = selectedModel?.config?.durations || [];
+  const showDurationPicker = availableDurations.length > 1;
 
   // Close dropdowns on outside click
   useEffect(() => {
-    if (!isModelDropdownOpen && !isRatioDropdownOpen) return;
-    const handler = () => { setIsModelDropdownOpen(false); setIsRatioDropdownOpen(false); };
+    if (!isModelDropdownOpen && !isRatioDropdownOpen && !isDurationDropdownOpen) return;
+    const handler = () => { setIsModelDropdownOpen(false); setIsRatioDropdownOpen(false); setIsDurationDropdownOpen(false); };
     document.addEventListener('click', handler);
     return () => document.removeEventListener('click', handler);
-  }, [isModelDropdownOpen, isRatioDropdownOpen]);
+  }, [isModelDropdownOpen, isRatioDropdownOpen, isDurationDropdownOpen]);
 
   // ── render ─────────────────────────────────────────────
   if (isLoading) {
@@ -452,7 +474,9 @@ export default function GeneratePage() {
                           <span className="text-[10px] text-purple-500 font-medium">Motion Control</span>
                         )}
                       </div>
-                      <span className="text-xs text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-lg">{model.price_tokens}⭐</span>
+                      <span className="text-xs text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-lg">
+                        {model.price_per_second != null ? `${model.price_per_second}⭐/с` : `${model.price_tokens}⭐`}
+                      </span>
                     </button>
                   ))}
                 </div>
@@ -463,7 +487,7 @@ export default function GeneratePage() {
           {!isMotionControl && (
             <div className="relative">
               <button
-                onClick={(e) => { e.stopPropagation(); setIsRatioDropdownOpen(!isRatioDropdownOpen); setIsModelDropdownOpen(false); }}
+                onClick={(e) => { e.stopPropagation(); setIsRatioDropdownOpen(!isRatioDropdownOpen); setIsModelDropdownOpen(false); setIsDurationDropdownOpen(false); }}
                 className="flex items-center justify-between gap-2 p-3 rounded-xl bg-gray-50 dark:bg-gray-800 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors min-w-[80px]"
               >
                 <span className="text-gray-900 dark:text-white font-medium">{aspectRatio}</span>
@@ -487,6 +511,40 @@ export default function GeneratePage() {
               )}
             </div>
           )}
+
+          {showDurationPicker && (
+            <div className="relative">
+              <button
+                onClick={(e) => { e.stopPropagation(); setIsDurationDropdownOpen(!isDurationDropdownOpen); setIsModelDropdownOpen(false); setIsRatioDropdownOpen(false); }}
+                className="flex items-center justify-between gap-2 p-3 rounded-xl bg-gray-50 dark:bg-gray-800 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors min-w-[72px]"
+              >
+                <span className="text-gray-900 dark:text-white font-medium">{duration}с</span>
+                <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isDurationDropdownOpen ? 'rotate-180' : ''}`} />
+              </button>
+              {isDurationDropdownOpen && (
+                <div
+                  className="absolute bottom-full right-0 mb-2 bg-white dark:bg-gray-800 rounded-xl shadow-xl z-[100] overflow-hidden border border-gray-200 dark:border-gray-700 min-w-[100px]"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {availableDurations.map((d) => {
+                    const dCost = selectedModel?.price_per_second != null
+                      ? Math.round(selectedModel.price_per_second * d)
+                      : selectedModel?.price_tokens ?? 0;
+                    return (
+                      <button
+                        key={d}
+                        onClick={() => { setDuration(d); setIsDurationDropdownOpen(false); }}
+                        className={`w-full p-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700 text-sm transition-colors flex justify-between items-center gap-3 ${duration === d ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'text-gray-900 dark:text-white'}`}
+                      >
+                        <span>{d}с</span>
+                        <span className="text-xs text-gray-400">{dCost}⭐</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -496,7 +554,9 @@ export default function GeneratePage() {
         className="w-full py-4 text-base font-semibold rounded-2xl"
         size="lg"
       >
-        {generation.isPending ? 'Генерация...' : 'Сгенерировать'}
+        {generation.isPending
+          ? 'Генерация...'
+          : `Сгенерировать · ${currentCost}⭐`}
       </Button>
 
       <Card
