@@ -26,6 +26,7 @@ export const ModelsPage = () => {
     name: '',
     description: '',
     price_tokens: '',
+    price_per_second: '',
     icon: '',
   });
   const queryClient = useQueryClient();
@@ -83,6 +84,7 @@ export const ModelsPage = () => {
       name: model.name,
       description: model.description || '',
       price_tokens: model.price_tokens.toString(),
+      price_per_second: model.price_per_second != null ? model.price_per_second.toString() : '',
       icon: model.icon || '',
     });
     hapticFeedback.light();
@@ -91,21 +93,39 @@ export const ModelsPage = () => {
   const handleSave = () => {
     if (!editingModel) return;
 
-    const price = parseFloat(formData.price_tokens);
-    if (isNaN(price) || price <= 0) {
-      showAlert('Цена должна быть больше 0');
-      return;
-    }
+    const isPerSecond = editingModel.price_per_second != null;
 
-    updateMutation.mutate({
-      modelId: editingModel.id,
-      updates: {
-        name: formData.name,
-        description: formData.description || null,
-        price_tokens: price,
-        icon: formData.icon || null,
-      },
-    });
+    if (isPerSecond) {
+      const pps = parseFloat(formData.price_per_second);
+      if (isNaN(pps) || pps <= 0) {
+        showAlert('Цена за секунду должна быть больше 0');
+        return;
+      }
+      updateMutation.mutate({
+        modelId: editingModel.id,
+        updates: {
+          name: formData.name,
+          description: formData.description || null,
+          price_per_second: pps,
+          icon: formData.icon || null,
+        },
+      });
+    } else {
+      const price = parseFloat(formData.price_tokens);
+      if (isNaN(price) || price <= 0) {
+        showAlert('Цена должна быть больше 0');
+        return;
+      }
+      updateMutation.mutate({
+        modelId: editingModel.id,
+        updates: {
+          name: formData.name,
+          description: formData.description || null,
+          price_tokens: price,
+          icon: formData.icon || null,
+        },
+      });
+    }
   };
 
   const handleToggle = (model: AIModel) => {
@@ -184,7 +204,9 @@ export const ModelsPage = () => {
                     <span className="text-tg-hint">{getTypeLabel(model.generation_type)}</span>
                     <span className="text-tg-button font-medium flex items-center gap-1">
                       <Coins className="w-3 h-3" />
-                      {model.price_tokens}
+                      {model.price_per_second != null
+                        ? `${model.price_per_second}⭐/с`
+                        : `${model.price_tokens}⭐`}
                     </span>
                   </div>
                 </div>
@@ -248,12 +270,22 @@ export const ModelsPage = () => {
               />
             </div>
             
-            <Input
-              label="Цена (токенов)"
-              type="number"
-              value={formData.price_tokens}
-              onChange={(e) => setFormData({ ...formData, price_tokens: e.target.value })}
-            />
+            {editingModel.price_per_second != null ? (
+              <Input
+                label="Цена за 1 секунду (токенов)"
+                type="number"
+                value={formData.price_per_second}
+                onChange={(e) => setFormData({ ...formData, price_per_second: e.target.value })}
+                placeholder="например: 4"
+              />
+            ) : (
+              <Input
+                label="Цена (токенов)"
+                type="number"
+                value={formData.price_tokens}
+                onChange={(e) => setFormData({ ...formData, price_tokens: e.target.value })}
+              />
+            )}
             
             <Input
               label="Иконка (emoji)"
