@@ -27,10 +27,10 @@ ALLOWED_VIDEO_EXTENSIONS = {".mp4", ".mov", ".webm"}
 
 # === Payments ===
 PAYMENT_PACKAGES = [
-    {"id": "standard", "name": "Стандарт", "amount": 10, "tokens": 300,  "offer_id": "5d8bdfaa-d141-499a-b2fe-09a6312bc96b"},
-    {"id": "vip",      "name": "VIP",      "amount": 20, "tokens": 630,  "offer_id": "32aa9ae1-ced9-47bb-b5c1-2166a4eb41a9"},
-    {"id": "premium",  "name": "Премиум",  "amount": 40, "tokens": 1300, "offer_id": "490746bb-b9d0-44f3-92e4-a0e0b4552659"},
-    {"id": "platinum", "name": "Платина",   "amount": 80, "tokens": 2650, "offer_id": "5250344d-6fb5-4355-9bff-051cce02c094"},
+    {"id": "standard", "name": "Стандарт", "amount": 10, "tokens": 300,  "offer_id": "8209d23e-e188-43c5-b725-a04a6391f5e1"},
+    {"id": "vip",      "name": "VIP",      "amount": 20, "tokens": 630,  "offer_id": "33167ef1-0032-454b-ac93-f0eecef8e95e"},
+    {"id": "premium",  "name": "Премиум",  "amount": 40, "tokens": 1300, "offer_id": "4e1aedfe-8f24-4750-8915-4bcdcd58cc8f"},
+    {"id": "platinum", "name": "Платина",   "amount": 80, "tokens": 2650, "offer_id": "12b79195-2c40-4f03-9f50-0b66f2855d81"},
 ]
 PAYMENT_CURRENCY = "USD"
 MIN_PAYMENT_AMOUNT = 10
