@@ -71,6 +71,38 @@ async def upload_file(
     async with aiofiles.open(filepath, "wb") as f:
         await f.write(content)
     
+    # Convert non-jpg image to jpg
+    if not is_video and ext not in ("jpg", "jpeg"):
+        jpg_filename = f"{uuid.uuid4()}.jpg"
+        jpg_filepath = UPLOAD_DIR / jpg_filename
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                "ffmpeg", "-i", str(filepath),
+                "-q:v", "2",
+                "-y", str(jpg_filepath),
+                stdout=asyncio.subprocess.DEVNULL,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            _, stderr = await proc.communicate()
+            if proc.returncode != 0:
+                logger.error(f"ffmpeg image conversion failed | {stderr.decode()}")
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Ошибка конвертации изображения"
+                )
+            filepath.unlink(missing_ok=True)
+            filename = jpg_filename
+            filepath = jpg_filepath
+            logger.info(f"Image converted to jpg | original_ext={ext}, new_file={jpg_filename}")
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"Image conversion error | {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Ошибка конвертации изображения"
+            )
+
     # Convert non-mp4 video to mp4
     if is_video and ext != "mp4":
         mp4_filename = f"{uuid.uuid4()}.mp4"
