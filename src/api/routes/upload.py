@@ -2,6 +2,7 @@
 
 import uuid
 import base64
+import asyncio
 import aiofiles
 from pathlib import Path
 from fastapi import APIRouter, HTTPException, UploadFile, File, status
@@ -62,13 +63,47 @@ async def upload_file(
         )
     
     # Generate unique filename
-    ext = file.filename.split(".")[-1] if file.filename and "." in file.filename else ("mp4" if is_video else "jpg")
+    ext = file.filename.split(".")[-1].lower() if file.filename and "." in file.filename else ("mp4" if is_video else "jpg")
     filename = f"{uuid.uuid4()}.{ext}"
     filepath = UPLOAD_DIR / filename
     
     # Save file
     async with aiofiles.open(filepath, "wb") as f:
         await f.write(content)
+    
+    # Convert non-mp4 video to mp4
+    if is_video and ext != "mp4":
+        mp4_filename = f"{uuid.uuid4()}.mp4"
+        mp4_filepath = UPLOAD_DIR / mp4_filename
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                "ffmpeg", "-i", str(filepath),
+                "-c:v", "libx264", "-c:a", "aac",
+                "-movflags", "+faststart",
+                "-y", str(mp4_filepath),
+                stdout=asyncio.subprocess.DEVNULL,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            _, stderr = await proc.communicate()
+            if proc.returncode != 0:
+                logger.error(f"ffmpeg conversion failed | {stderr.decode()}")
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Ошибка конвертации видео"
+                )
+            # Remove original and use mp4
+            filepath.unlink(missing_ok=True)
+            filename = mp4_filename
+            filepath = mp4_filepath
+            logger.info(f"Video converted to mp4 | original_ext={ext}, new_file={mp4_filename}")
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"Video conversion error | {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Ошибка конвертации видео"
+            )
     
     # Build URL
     url = f"{settings.WEBAPP_URL}/static/uploads/{filename}"
