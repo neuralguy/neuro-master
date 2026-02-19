@@ -150,7 +150,7 @@ DEFAULT_MODELS = [
     },
     {
         "code": "nano-banana-2",
-        "name": "Nano Banana 2",
+        "name": "Nano Banana Pro",
         "description": "Google Gemini — улучшенное качество",
         "provider": "poyo.ai",
         "provider_model": "nano-banana-2",
@@ -253,7 +253,7 @@ DEFAULT_MODELS = [
     },
     {
         "code": "nano-banana-2-edit",
-        "name": "Nano Banana 2",
+        "name": "Nano Banana Pro",
         "description": "Google — улучшенное редактирование",
         "provider": "poyo.ai",
         "provider_model": "nano-banana-2-edit",
@@ -556,11 +556,15 @@ async def seed_default_models(session: AsyncSession) -> None:
             if existing.provider_model != model_data["provider_model"]:
                 existing.provider_model = model_data["provider_model"]
                 changed = True
+            if existing.name != model_data["name"]:
+                existing.name = model_data["name"]
+                changed = True
             if changed:
                 await session.flush()
                 logger.info(
-                    f"Updated model provider | code={model_data['code']}, "
-                    f"provider={model_data['provider']}, provider_model={model_data['provider_model']}"
+                    f"Updated model | code={model_data['code']}, "
+                    f"provider={model_data['provider']}, provider_model={model_data['provider_model']}, "
+                    f"name={model_data['name']}"
                 )
 
     await session.commit()
