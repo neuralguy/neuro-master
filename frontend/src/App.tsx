@@ -37,6 +37,7 @@ function getInitialRoute(): string {
 
   const tab = params.get('tab');
   if (tab === 'video') return '/generate?type=video';
+  if (tab === 'balance') return '/balance';
 
   return '/generate?type=image';
 }
