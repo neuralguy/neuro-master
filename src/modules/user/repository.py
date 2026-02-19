@@ -156,6 +156,26 @@ class UserRepository:
         result = await self.session.execute(query)
         return result.scalar_one()
 
+    async def get_by_balance_filter(
+        self,
+        balance_threshold: int,
+        comparison: str,
+    ) -> list[User]:
+        """
+        Get users filtered by balance.
+        
+        comparison: 'gte' (>=) or 'lte' (<=)
+        """
+        query = select(User).where(User.is_banned == False)
+
+        if comparison == "gte":
+            query = query.where(User.balance >= balance_threshold)
+        else:
+            query = query.where(User.balance <= balance_threshold)
+
+        result = await self.session.execute(query)
+        return list(result.scalars().all())
+
     async def get_stats(self) -> dict:
         """Get user statistics."""
         total = await self.session.execute(select(func.count(User.id)))

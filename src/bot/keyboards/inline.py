@@ -141,8 +141,66 @@ def get_admin_keyboard() -> InlineKeyboardMarkup:
             ],
             [
                 InlineKeyboardButton(
+                    text="📢 Рассылка",
+                    callback_data="admin:broadcast",
+                ),
+            ],
+            [
+                InlineKeyboardButton(
                     text="🌐 Открыть админку",
                     web_app=WebAppInfo(url=f"{settings.WEBAPP_URL}/admin"),
+                ),
+            ],
+        ]
+    )
+    return keyboard
+
+
+def get_broadcast_filter_keyboard() -> InlineKeyboardMarkup:
+    """Get keyboard for choosing broadcast balance filter."""
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="📈 Больше N токенов",
+                    callback_data="broadcast:filter:gte",
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    text="📉 Меньше N токенов",
+                    callback_data="broadcast:filter:lte",
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    text="👥 Всем пользователям",
+                    callback_data="broadcast:filter:all",
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    text="◀️ Назад",
+                    callback_data="back_to_admin",
+                ),
+            ],
+        ]
+    )
+    return keyboard
+
+
+def get_broadcast_confirm_keyboard(count: int) -> InlineKeyboardMarkup:
+    """Get broadcast confirmation keyboard."""
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text=f"✅ Отправить ({count} чел.)",
+                    callback_data="broadcast:confirm",
+                ),
+                InlineKeyboardButton(
+                    text="❌ Отмена",
+                    callback_data="broadcast:cancel",
                 ),
             ],
         ]
