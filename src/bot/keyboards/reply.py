@@ -8,6 +8,7 @@ from src.shared.constants import (
     CREATE_VIDEO_BUTTON_TEXT,
     TRENDING_PROMPTS_BUTTON_TEXT,
     EARN_TOKENS_BUTTON_TEXT,
+    BALANCE_BUTTON_TEXT,
     HELP_BUTTON_TEXT,
 )
 
@@ -29,13 +30,17 @@ def get_main_menu_keyboard(user_id: int, token: str) -> ReplyKeyboardMarkup:
                 ),
             ],
             [
+                KeyboardButton(
+                    text=BALANCE_BUTTON_TEXT,
+                    web_app=WebAppInfo(url=f"{base_url}&tab=balance"),
+                ),
                 KeyboardButton(text=TRENDING_PROMPTS_BUTTON_TEXT),
+            ],
+            [
                 KeyboardButton(
                     text=EARN_TOKENS_BUTTON_TEXT,
                     web_app=WebAppInfo(url=f"{base_url}&page=profile"),
                 ),
-            ],
-            [
                 KeyboardButton(text=HELP_BUTTON_TEXT),
             ],
         ],
