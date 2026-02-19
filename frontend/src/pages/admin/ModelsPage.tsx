@@ -95,39 +95,20 @@ export const ModelsPage = () => {
   const handleSave = () => {
     if (!editingModel) return;
 
-    const isPerSecond = formData.is_per_second;
-
-    if (isPerSecond) {
-      const pps = parseFloat(formData.price_per_second);
-      if (isNaN(pps) || pps <= 0) {
-        showAlert('Цена за секунду должна быть больше 0');
-        return;
-      }
-      updateMutation.mutate({
-        modelId: editingModel.id,
-        updates: {
-          name: formData.name,
-          description: formData.description || null,
-          price_per_second: pps,
-          icon: formData.icon || null,
-        },
-      });
-    } else {
-      const price = parseFloat(formData.price_tokens);
-      if (isNaN(price) || price <= 0) {
-        showAlert('Цена должна быть больше 0');
-        return;
-      }
-      updateMutation.mutate({
-        modelId: editingModel.id,
-        updates: {
-          name: formData.name,
-          description: formData.description || null,
-          price_tokens: price,
-          icon: formData.icon || null,
-        },
-      });
+    const pps = parseFloat(formData.price_per_second);
+    if (isNaN(pps) || pps <= 0) {
+      showAlert('Цена за секунду должна быть больше 0');
+      return;
     }
+    updateMutation.mutate({
+      modelId: editingModel.id,
+      updates: {
+        name: formData.name,
+        description: formData.description || null,
+        price_per_second: pps,
+        icon: formData.icon || null,
+      },
+    });
   };
 
   const handleToggle = (model: AIModel) => {
@@ -272,40 +253,13 @@ export const ModelsPage = () => {
               />
             </div>
             
-            <div className="flex items-center gap-3 py-1">
-              <span className="text-sm text-tg-hint">Тип цены:</span>
-              <button
-                type="button"
-                onClick={() => setFormData({ ...formData, is_per_second: false })}
-                className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${!formData.is_per_second ? 'bg-tg-button text-white' : 'bg-gray-100 text-gray-500'}`}
-              >
-                Фиксированная
-              </button>
-              <button
-                type="button"
-                onClick={() => setFormData({ ...formData, is_per_second: true })}
-                className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${formData.is_per_second ? 'bg-tg-button text-white' : 'bg-gray-100 text-gray-500'}`}
-              >
-                За секунду
-              </button>
-            </div>
-
-            {formData.is_per_second ? (
-              <Input
-                label="Цена за 1 секунду (токенов)"
-                type="number"
-                value={formData.price_per_second}
-                onChange={(e) => setFormData({ ...formData, price_per_second: e.target.value })}
-                placeholder="например: 1"
-              />
-            ) : (
-              <Input
-                label="Цена (токенов)"
-                type="number"
-                value={formData.price_tokens}
-                onChange={(e) => setFormData({ ...formData, price_tokens: e.target.value })}
-              />
-            )}
+            <Input
+              label="Цена за 1 секунду (токенов)"
+              type="number"
+              value={formData.price_per_second}
+              onChange={(e) => setFormData({ ...formData, price_per_second: e.target.value })}
+              placeholder="например: 1"
+            />
             
             <Input
               label="Иконка (emoji)"
