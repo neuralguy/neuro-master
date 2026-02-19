@@ -6,6 +6,7 @@ from src.shared.enums import GenerationType
 
 class AIModelConfig(BaseModel):
     """Model configuration."""
+    mode: str | None = None
     aspect_ratios: list[str] | None = None
     durations: list[int] | None = None
     supports_image_input: bool = False
