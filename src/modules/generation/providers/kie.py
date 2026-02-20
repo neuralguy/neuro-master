@@ -117,19 +117,23 @@ class KieProvider(BaseGenerationProvider):
                 message="No taskId in veo response",
             )
 
-        logger.info(f"kie.ai veo task created | task_id={task_id}")
+        # Добавляем префикс чтобы при polling знать какой эндпоинт использовать
+        prefixed_id = f"veo_{task_id}"
+        logger.info(f"kie.ai veo task created | task_id={prefixed_id}")
         return GenerationTask(
-            task_id=task_id,
+            task_id=prefixed_id,
             status="pending",
             raw_response=response,
         )
 
     async def _get_veo_task_status(self, task_id: str) -> GenerationTask:
         """Получить статус veo-задачи через /api/v1/veo/record-info."""
+        # Снимаем префикс veo_ перед отправкой в API
+        real_task_id = task_id.removeprefix("veo_")
         response = await self._request(
             method="GET",
             endpoint="/veo/record-info",
-            params={"taskId": task_id},
+            params={"taskId": real_task_id},
         )
 
         data = response.get("data", {})
