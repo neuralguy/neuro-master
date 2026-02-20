@@ -296,11 +296,16 @@ class GenerationService:
                         # Add to gallery
                         generation = await self.generation_repo.get_by_id(generation_id)
                         if generation:
+                            is_video = generation.generation_type == GenerationType.VIDEO
+                            thumbnail_path = None
+                            if is_video:
+                                thumbnail_path = await self._generate_video_thumbnail(file_path)
                             await self.gallery_repo.create(
                                 user_id=generation.user_id,
                                 generation_id=generation.id,
                                 file_path=file_path,
-                                file_type="video" if generation.generation_type == GenerationType.VIDEO else "image",
+                                file_type="video" if is_video else "image",
+                                thumbnail_path=thumbnail_path,
                             )
 
                     await self.session.commit()
@@ -435,6 +440,28 @@ class GenerationService:
         logger.debug(f"Result downloaded | id={generation_id}, path={file_path}, size={len(response.content)}")
 
         return str(file_path)
+
+    async def _generate_video_thumbnail(self, video_path: str) -> str | None:
+        """Извлечь первый кадр видео как thumbnail через ffmpeg."""
+        try:
+            thumb_path = Path(video_path).with_suffix(".thumb.jpg")
+            proc = await asyncio.create_subprocess_exec(
+                "ffmpeg", "-y",
+                "-i", video_path,
+                "-vframes", "1",
+                "-q:v", "2",
+                str(thumb_path),
+                stdout=asyncio.subprocess.DEVNULL,
+                stderr=asyncio.subprocess.DEVNULL,
+            )
+            await proc.wait()
+            if proc.returncode == 0 and thumb_path.exists():
+                logger.debug(f"Thumbnail generated | path={thumb_path}")
+                return str(thumb_path)
+            logger.warning(f"ffmpeg failed to generate thumbnail | video={video_path}, rc={proc.returncode}")
+        except Exception as e:
+            logger.warning(f"Thumbnail generation error | video={video_path}, error={e}")
+        return None
 
     async def _refund_tokens(self, generation: Generation) -> None:
         """Refund tokens for failed generation."""

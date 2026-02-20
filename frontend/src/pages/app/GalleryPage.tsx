@@ -103,6 +103,7 @@ export const GalleryPage = () => {
                 {item.file_type === 'video' ? (
                   <video
                     src={item.file_url}
+                    poster={item.thumbnail_url || undefined}
                     className="w-full h-full object-cover"
                   />
                 ) : (
