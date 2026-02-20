@@ -255,7 +255,8 @@ export default function GeneratePage() {
     try {
       const response = await uploadApi.uploadFile(file);
       setUploadedVideoUrl(response.url);
-      setUploadedVideoDuration(response.duration ?? null);
+      // Округляем до целого числа секунд (ffprobe возвращает float)
+      setUploadedVideoDuration(response.duration != null ? Math.round(response.duration) : null);
     } catch { alert('Ошибка загрузки видео'); setUploadedVideo(null); setUploadedVideoDuration(null); }
     finally { setIsUploadingVideo(false); }
   };

@@ -578,7 +578,9 @@ DEFAULT_MODELS = [
         "provider": "kie.ai",
         "provider_model": "kling-2.6/motion-control",
         "generation_type": "video",
-        "price_tokens": 50,
+        "price_tokens": 1,       # цена за секунду (длительность = длина загруженного видео)
+        "price_per_second": 1,
+        "price_display_mode": "per_second",
         "icon": "🕺",
         "config": {
             "mode": "motion-control",
@@ -613,10 +615,14 @@ async def seed_default_models(session: AsyncSession) -> None:
             if existing.config != model_data.get("config"):
                 existing.config = model_data.get("config")
                 changed = True
-            # Sync price_per_second from DEFAULT_MODELS (not admin-managed)
+            # Sync price_per_second и price_display_mode из DEFAULT_MODELS
             new_pps = model_data.get("price_per_second")
             if existing.price_per_second != new_pps:
                 existing.price_per_second = new_pps
+                changed = True
+            new_pdm = model_data.get("price_display_mode", "fixed")
+            if existing.price_display_mode != new_pdm:
+                existing.price_display_mode = new_pdm
                 changed = True
             if existing.sort_order != i:
                 existing.sort_order = i
