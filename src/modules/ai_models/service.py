@@ -462,7 +462,7 @@ DEFAULT_MODELS = [
 
     # ==================== VIDEO: Image-to-Video ====================
     {
-        "code": "veo3_fast",
+        "code": "veo3-fast-i2v",
         "name": "Veo 3.1 Fast",
         "description": "Google Veo 3.1 — видео из изображения",
         "provider": "kie.ai",
