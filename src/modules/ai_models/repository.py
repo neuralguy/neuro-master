@@ -59,6 +59,8 @@ class AIModelRepository:
         config: dict | None = None,
         icon: str | None = None,
         sort_order: int = 0,
+        price_per_second: float | None = None,
+        price_display_mode: str = "fixed",
     ) -> AIModel:
         """Create new AI model."""
         model = AIModel(
@@ -72,6 +74,8 @@ class AIModelRepository:
             config=config or {},
             icon=icon,
             sort_order=sort_order,
+            price_per_second=price_per_second,
+            price_display_mode=price_display_mode,
         )
         self.session.add(model)
         await self.session.flush()
