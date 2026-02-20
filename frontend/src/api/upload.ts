@@ -4,6 +4,7 @@ export interface UploadResponse {
   url: string;
   filename: string;
   file_type: string; // "image" | "video"
+  duration?: number | null; // длительность видео в секундах
 }
 
 export const uploadApi = {

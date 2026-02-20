@@ -28,6 +28,7 @@ class UploadResponse(BaseModel):
     url: str
     filename: str
     file_type: str  # "image" или "video"
+    duration: float | None = None  # длительность видео в секундах
 
 
 class Base64UploadRequest(BaseModel):
@@ -103,6 +104,9 @@ async def upload_file(
                 detail="Ошибка конвертации изображения"
             )
 
+    # Длительность видео (определяется через ffprobe)
+    video_duration: float | None = None
+
     # Check video duration (3s - 30s)
     if is_video:
         try:
@@ -115,18 +119,18 @@ async def upload_file(
                 stderr=asyncio.subprocess.DEVNULL,
             )
             stdout, _ = await proc.communicate()
-            duration = float(stdout.decode().strip())
-            if duration < 3:
+            video_duration = float(stdout.decode().strip())
+            if video_duration < 3:
                 filepath.unlink(missing_ok=True)
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Видео слишком короткое ({duration:.1f}с). Минимум 3 секунды."
+                    detail=f"Видео слишком короткое ({video_duration:.1f}с). Минимум 3 секунды."
                 )
-            if duration > 30:
+            if video_duration > 30:
                 filepath.unlink(missing_ok=True)
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Видео слишком длинное ({duration:.1f}с). Максимум 30 секунд."
+                    detail=f"Видео слишком длинное ({video_duration:.1f}с). Максимум 30 секунд."
                 )
         except HTTPException:
             raise
@@ -173,7 +177,7 @@ async def upload_file(
     
     logger.info(f"File uploaded | user_id={current_user.id}, filename={filename}, type={file_type}, size={len(content)}")
     
-    return UploadResponse(url=url, filename=filename, file_type=file_type)
+    return UploadResponse(url=url, filename=filename, file_type=file_type, duration=video_duration)
 
 
 @router.post("/base64", response_model=UploadResponse)

@@ -86,6 +86,7 @@ export default function GeneratePage() {
   // Video upload
   const [uploadedVideo, setUploadedVideo] = useState<string | null>(null);
   const [uploadedVideoUrl, setUploadedVideoUrl] = useState<string | null>(null);
+  const [uploadedVideoDuration, setUploadedVideoDuration] = useState<number | null>(null);
   const [isUploadingVideo, setIsUploadingVideo] = useState(false);
 
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
@@ -187,8 +188,12 @@ export default function GeneratePage() {
   // Calculate cost based on price_display_mode and selected duration
   const currentCost = (() => {
     if (!selectedModel) return 0;
-    if (selectedModel.price_display_mode === 'per_second' && selectedModel.price_per_second != null && duration != null) {
-      return Math.round(selectedModel.price_per_second * duration);
+    if (selectedModel.price_display_mode === 'per_second' && selectedModel.price_per_second != null) {
+      // Для motion control используем длительность загруженного видео
+      const effectiveDuration = isMotionControl ? uploadedVideoDuration : duration;
+      if (effectiveDuration != null) {
+        return Math.round(selectedModel.price_per_second * effectiveDuration);
+      }
     }
     return selectedModel.price_tokens;
   })();
@@ -249,7 +254,8 @@ export default function GeneratePage() {
     try {
       const response = await uploadApi.uploadFile(file);
       setUploadedVideoUrl(response.url);
-    } catch { alert('Ошибка загрузки видео'); setUploadedVideo(null); }
+      setUploadedVideoDuration(response.duration ?? null);
+    } catch { alert('Ошибка загрузки видео'); setUploadedVideo(null); setUploadedVideoDuration(null); }
     finally { setIsUploadingVideo(false); }
   };
 
@@ -264,6 +270,7 @@ export default function GeneratePage() {
     if (uploadedVideo) URL.revokeObjectURL(uploadedVideo);
     setUploadedVideo(null);
     setUploadedVideoUrl(null);
+    setUploadedVideoDuration(null);
     if (videoInputRef.current) videoInputRef.current.value = '';
   };
 
@@ -288,7 +295,8 @@ export default function GeneratePage() {
       image_url: uploadedImageUrl || undefined,
       video_url: uploadedVideoUrl || undefined,
       aspect_ratio: aspectRatio,
-      duration: duration ?? undefined,
+      // Для motion control передаём длительность загруженного видео
+      duration: isMotionControl ? (uploadedVideoDuration ?? undefined) : (duration ?? undefined),
     });
   };
 
