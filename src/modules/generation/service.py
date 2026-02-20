@@ -94,9 +94,13 @@ class GenerationService:
             and model.price_per_second is not None
             and duration is not None
         ):
-            cost = model.price_per_second * duration
+            cost = int(round(model.price_per_second * duration))
         else:
-            cost = model.price_tokens
+            cost = int(round(model.price_tokens))
+
+        # Гарантируем что cost > 0
+        if cost <= 0:
+            cost = int(round(model.price_tokens)) or 1
 
         if user.balance < cost:
             raise InsufficientBalanceError(
