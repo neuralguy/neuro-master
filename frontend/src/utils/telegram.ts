@@ -101,11 +101,23 @@ export function initTokenAuth(): void {
   const params = new URLSearchParams(window.location.search);
   const uid = params.get('uid');
   const token = params.get('token');
+
   if (uid && token) {
+    // Сохраняем в sessionStorage, чтобы пережить перезагрузку страницы
     _cachedTokenAuth = { uid, token };
+    sessionStorage.setItem('tg_uid', uid);
+    sessionStorage.setItem('tg_token', token);
     console.log('[auth] Token auth cached from URL', { uid, tokenLen: token.length });
   } else {
-    console.log('[auth] No token auth params in URL');
+    // Параметров нет в URL — пробуем восстановить из sessionStorage (после reload)
+    const storedUid = sessionStorage.getItem('tg_uid');
+    const storedToken = sessionStorage.getItem('tg_token');
+    if (storedUid && storedToken) {
+      _cachedTokenAuth = { uid: storedUid, token: storedToken };
+      console.log('[auth] Token auth restored from sessionStorage', { uid: storedUid });
+    } else {
+      console.log('[auth] No token auth params in URL or sessionStorage');
+    }
   }
 }
 
