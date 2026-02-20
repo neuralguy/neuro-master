@@ -161,7 +161,7 @@ class GenerationService:
 
         logger.info(
             f"Generation started | id={generation.id}, model={model_code}, "
-            f"provider={model.provider}, user_id={user_id}, tokens={model.price_tokens}"
+            f"provider={model.provider}, user_id={user_id}, tokens={cost}"
         )
 
         return generation

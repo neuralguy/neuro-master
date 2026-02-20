@@ -19,30 +19,38 @@ function getFilteredModelIds(
   allModels: AIModel[],
   activeType: GenerationType,
   hasImage: boolean,
+  hasVideo: boolean,
 ): number[] {
   let filtered: AIModel[];
 
   if (activeType === 'video') {
-    if (hasImage) {
+    if (hasImage && hasVideo) {
+      // Фото + видео → только motion-control
+      filtered = allModels.filter(m => m.config?.mode === 'motion-control');
+    } else if (hasImage) {
+      // Только фото → image-to-video модели
       filtered = allModels.filter(m => {
         const mode = m.config?.mode;
-        return mode === 'image-to-video' || mode === 'motion-control' || m.code.includes('-i2v');
+        return mode === 'image-to-video' || m.code.includes('-i2v');
       });
+    } else if (hasVideo) {
+      // Только видео (без фото) → только motion-control (требует и фото, и видео)
+      filtered = allModels.filter(m => m.config?.mode === 'motion-control');
     } else {
+      // Ничего нет → text-to-video модели
       filtered = allModels.filter(m => {
         const mode = m.config?.mode;
-        if (mode === 'motion-control') return true;
-        if (mode === 'image-to-video') return false;
-        if (m.code.includes('-i2v')) return false;
-        return true;
+        return mode === 'text-to-video' || (!mode && !m.code.includes('-i2v'));
       });
     }
   } else if (activeType === 'image') {
     if (hasImage) {
+      // Есть фото → image-to-image модели
       filtered = allModels.filter(m =>
         m.code.includes('-edit') || m.config?.mode === 'image-to-image'
       );
     } else {
+      // Нет фото → text-to-image модели
       filtered = allModels.filter(m =>
         !m.code.includes('-edit') && m.config?.mode !== 'image-to-image'
       );
@@ -110,8 +118,8 @@ export default function GeneratePage() {
 
   // Compute filtered IDs, then stabilise the array reference
   const filteredIdsRaw = useMemo(
-    () => getFilteredModelIds(allModelsForType, activeType, hasImage),
-    [allModelsForType, activeType, hasImage],
+    () => getFilteredModelIds(allModelsForType, activeType, hasImage, hasVideo),
+    [allModelsForType, activeType, hasImage, hasVideo],
   );
 
   const filteredIdsKeyStr = idsKey(filteredIdsRaw);
@@ -283,8 +291,8 @@ export default function GeneratePage() {
     if (isMotionControl) {
       if (!uploadedImageUrl) { alert('Для Motion Control необходимо загрузить фото персонажа'); return; }
       if (!uploadedVideoUrl) { alert('Для Motion Control необходимо загрузить референсное видео с движением'); return; }
-    } else if (!hasImage && !prompt.trim()) {
-      alert('Введите описание'); return;
+    } else {
+      if (!prompt.trim()) { alert('Введите описание'); return; }
     }
 
     if (hasImage && !uploadedImageUrl) { alert('Дождитесь загрузки изображения'); return; }
