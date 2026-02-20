@@ -33,8 +33,20 @@ apiClient.interceptors.request.use((config) => {
 // Handle errors
 apiClient.interceptors.response.use(
   (response) => response,
-  (error: AxiosError<{ detail: string }>) => {
-    const message = error.response?.data?.detail || error.message || 'Произошла ошибка';
+  (error: AxiosError<{ detail: unknown }>) => {
+    const detail = error.response?.data?.detail;
+    let message: string;
+    if (typeof detail === 'string') {
+      message = detail;
+    } else if (Array.isArray(detail) && detail.length > 0) {
+      // Pydantic validation errors — берём первое сообщение
+      const first = detail[0] as { msg?: string };
+      message = first?.msg || JSON.stringify(detail);
+    } else if (detail != null) {
+      message = JSON.stringify(detail);
+    } else {
+      message = error.message || 'Произошла ошибка';
+    }
     console.error('API Error:', message, error.response?.status);
     return Promise.reject(new Error(message));
   }

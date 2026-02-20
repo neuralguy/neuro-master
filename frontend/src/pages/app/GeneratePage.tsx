@@ -189,11 +189,12 @@ export default function GeneratePage() {
   const currentCost = (() => {
     if (!selectedModel) return 0;
     if (selectedModel.price_display_mode === 'per_second' && selectedModel.price_per_second != null) {
-      // Для motion control используем длительность загруженного видео
       const effectiveDuration = isMotionControl ? uploadedVideoDuration : duration;
       if (effectiveDuration != null) {
         return Math.round(selectedModel.price_per_second * effectiveDuration);
       }
+      // Длительность ещё неизвестна — возвращаем null, чтобы показать цену/сек
+      return null;
     }
     return selectedModel.price_tokens;
   })();
@@ -211,7 +212,7 @@ export default function GeneratePage() {
     onSuccess: () => {
       tg?.HapticFeedback?.notificationOccurred('success');
       alert('Генерация запущена! Результат появится в галерее.');
-      if (user) {
+      if (user && currentCost != null) {
         updateBalance(user.balance - currentCost);
       }
       setPrompt('');
@@ -287,7 +288,7 @@ export default function GeneratePage() {
 
     if (hasImage && !uploadedImageUrl) { alert('Дождитесь загрузки изображения'); return; }
     if (hasVideo && !uploadedVideoUrl) { alert('Дождитесь загрузки видео'); return; }
-    if (user && user.balance < currentCost) { alert('Недостаточно токенов'); return; }
+    if (user && currentCost != null && user.balance < currentCost) { alert('Недостаточно токенов'); return; }
 
     generation.mutate({
       model_code: selectedModel.code,
@@ -564,7 +565,9 @@ export default function GeneratePage() {
       >
         {generation.isPending
           ? 'Генерация...'
-          : `Сгенерировать · ${currentCost}⭐`}
+          : currentCost == null
+            ? `Сгенерировать · ${selectedModel?.price_per_second}⭐/с`
+            : `Сгенерировать · ${currentCost}⭐`}
       </Button>
 
       <Card
