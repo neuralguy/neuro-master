@@ -7,7 +7,7 @@ from sqlalchemy.dialects.postgresql import JSON
 from sqlalchemy.orm import Mapped, mapped_column
 
 from src.core.database import Base
-from src.shared.enums import GenerationType
+from src.shared.enums import GenerationType, PriceDisplayMode
 
 
 class AIModel(Base):
@@ -35,6 +35,10 @@ class AIModel(Base):
     price_tokens: Mapped[float] = mapped_column(Float, nullable=False, default=10.0)
     price_per_second: Mapped[float | None] = mapped_column(Float, nullable=True)
     # If price_per_second is set, the total cost = price_per_second * duration (for video models)
+    price_display_mode: Mapped[PriceDisplayMode] = mapped_column(
+        Enum(PriceDisplayMode), nullable=False, default=PriceDisplayMode.FIXED
+    )
+    # Режим отображения цены: per_second — показывать цену/сек, fixed — показывать price_tokens
     
     # Status
     is_enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)

@@ -39,7 +39,11 @@ export const ModelCard = ({ model, isSelected, onClick }: ModelCardProps) => {
           )}
           <div className="flex items-center gap-1 mt-2 text-sm text-tg-button">
             <Coins className="w-4 h-4" />
-            <span className="font-medium">{model.price_tokens} токенов</span>
+            <span className="font-medium">
+              {model.price_display_mode === 'per_second' && model.price_per_second != null
+                ? `${model.price_per_second}⭐/сек`
+                : `${model.price_tokens}⭐`}
+            </span>
           </div>
         </div>
       </div>

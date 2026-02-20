@@ -47,6 +47,8 @@ export interface AIModelConfig {
   resolution?: string;
 }
 
+export type PriceDisplayMode = 'per_second' | 'fixed';
+
 export interface AIModel {
   id: number;
   code: string;
@@ -55,6 +57,7 @@ export interface AIModel {
   generation_type: 'image' | 'video';
   price_tokens: number;
   price_per_second: number | null;
+  price_display_mode: PriceDisplayMode;
   is_enabled: boolean;
   config: AIModelConfig;
   icon: string | null;

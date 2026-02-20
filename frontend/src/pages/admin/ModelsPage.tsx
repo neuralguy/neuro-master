@@ -27,8 +27,8 @@ export const ModelsPage = () => {
     description: '',
     price_tokens: '',
     price_per_second: '',
+    price_display_mode: 'fixed' as 'fixed' | 'per_second',
     icon: '',
-    is_per_second: false,
   });
   const queryClient = useQueryClient();
 
@@ -86,8 +86,8 @@ export const ModelsPage = () => {
       description: model.description || '',
       price_tokens: model.price_tokens.toString(),
       price_per_second: model.price_per_second != null ? model.price_per_second.toString() : '',
+      price_display_mode: model.price_display_mode,
       icon: model.icon || '',
-      is_per_second: model.price_per_second != null,
     });
     hapticFeedback.light();
   };
@@ -95,20 +95,32 @@ export const ModelsPage = () => {
   const handleSave = () => {
     if (!editingModel) return;
 
-    const pps = parseFloat(formData.price_per_second);
-    if (isNaN(pps) || pps <= 0) {
-      showAlert('Цена за секунду должна быть больше 0');
+    const pt = parseFloat(formData.price_tokens);
+    if (isNaN(pt) || pt <= 0) {
+      showAlert('Цена за генерацию должна быть больше 0');
       return;
     }
-    updateMutation.mutate({
-      modelId: editingModel.id,
-      updates: {
-        name: formData.name,
-        description: formData.description || null,
-        price_per_second: pps,
-        icon: formData.icon || null,
-      },
-    });
+
+    const updates: Record<string, any> = {
+      name: formData.name,
+      description: formData.description || null,
+      price_tokens: pt,
+      price_display_mode: formData.price_display_mode,
+      icon: formData.icon || null,
+    };
+
+    if (formData.price_per_second !== '') {
+      const pps = parseFloat(formData.price_per_second);
+      if (isNaN(pps) || pps <= 0) {
+        showAlert('Цена за секунду должна быть больше 0');
+        return;
+      }
+      updates.price_per_second = pps;
+    } else {
+      updates.price_per_second = null;
+    }
+
+    updateMutation.mutate({ modelId: editingModel.id, updates });
   };
 
   const handleToggle = (model: AIModel) => {
@@ -188,8 +200,12 @@ export const ModelsPage = () => {
                     <span className="text-tg-button font-medium flex items-center gap-1">
                       <Coins className="w-3 h-3" />
                       {model.price_per_second != null
-                        ? `${model.price_per_second}⭐/с`
+                        ? `${model.price_tokens}⭐ / ${model.price_per_second}⭐/с`
                         : `${model.price_tokens}⭐`}
+                      {' '}
+                      <span className="text-tg-hint font-normal">
+                        ({model.price_display_mode === 'per_second' ? 'показывается /с' : 'показывается фикс.'})
+                      </span>
                     </span>
                   </div>
                 </div>
@@ -240,7 +256,7 @@ export const ModelsPage = () => {
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             />
-            
+
             <div>
               <label className="block text-sm font-medium text-tg-text mb-1.5">
                 Описание
@@ -252,15 +268,54 @@ export const ModelsPage = () => {
                 rows={3}
               />
             </div>
-            
+
             <Input
-              label="Цена за 1 секунду (токенов)"
+              label="Цена за генерацию (⭐)"
+              type="number"
+              value={formData.price_tokens}
+              onChange={(e) => setFormData({ ...formData, price_tokens: e.target.value })}
+              placeholder="например: 10"
+            />
+
+            <Input
+              label="Цена за 1 секунду (⭐, только для видео)"
               type="number"
               value={formData.price_per_second}
               onChange={(e) => setFormData({ ...formData, price_per_second: e.target.value })}
-              placeholder="например: 1"
+              placeholder="оставьте пустым если не нужно"
             />
-            
+
+            {/* Переключатель режима отображения цены */}
+            <div>
+              <label className="block text-sm font-medium text-tg-text mb-2">
+                Показывать пользователю
+              </label>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, price_display_mode: 'fixed' })}
+                  className={`flex-1 py-2 px-3 rounded-xl text-sm font-medium border transition-all ${
+                    formData.price_display_mode === 'fixed'
+                      ? 'bg-tg-button text-white border-tg-button'
+                      : 'bg-tg-bg text-tg-hint border-gray-200'
+                  }`}
+                >
+                  Цена за генерацию
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, price_display_mode: 'per_second' })}
+                  className={`flex-1 py-2 px-3 rounded-xl text-sm font-medium border transition-all ${
+                    formData.price_display_mode === 'per_second'
+                      ? 'bg-tg-button text-white border-tg-button'
+                      : 'bg-tg-bg text-tg-hint border-gray-200'
+                  }`}
+                >
+                  Цена за секунду
+                </button>
+              </div>
+            </div>
+
             <Input
               label="Иконка (emoji)"
               value={formData.icon}

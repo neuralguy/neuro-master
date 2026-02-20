@@ -8,6 +8,12 @@ class GenerationType(str, Enum):
     FACESWAP = "faceswap"
 
 
+class PriceDisplayMode(str, Enum):
+    """Режим отображения цены модели пользователю."""
+    PER_SECOND = "per_second"   # Цена за 1 секунду
+    FIXED = "fixed"             # Фиксированная цена за генерацию
+
+
 class GenerationStatus(str, Enum):
     """Status of generation task."""
     PENDING = "pending"

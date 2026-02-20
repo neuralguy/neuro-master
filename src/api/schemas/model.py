@@ -1,7 +1,7 @@
 """AI Model schemas."""
 
 from pydantic import BaseModel
-from src.shared.enums import GenerationType
+from src.shared.enums import GenerationType, PriceDisplayMode
 
 
 class AIModelConfig(BaseModel):
@@ -25,6 +25,7 @@ class AIModelResponse(BaseModel):
     generation_type: GenerationType
     price_tokens: float
     price_per_second: float | None = None
+    price_display_mode: PriceDisplayMode = PriceDisplayMode.FIXED
     is_enabled: bool
     config: AIModelConfig | dict
     icon: str | None
@@ -47,6 +48,7 @@ class AIModelUpdateRequest(BaseModel):
     description: str | None = None
     price_tokens: float | None = None
     price_per_second: float | None = None
+    price_display_mode: PriceDisplayMode | None = None
     is_enabled: bool | None = None
     config: dict | None = None
     icon: str | None = None
