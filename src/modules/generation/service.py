@@ -184,6 +184,10 @@ class GenerationService:
             # Build request
             video_url = generation.params.get("video_url")
 
+            # Конвертируем видео в mp4 перед отправкой провайдеру (если нужно)
+            if video_url:
+                video_url = await self._ensure_mp4(video_url)
+
             request = GenerationRequest(
                 model=provider_model,
                 prompt=generation.prompt,
@@ -440,6 +444,49 @@ class GenerationService:
         logger.debug(f"Result downloaded | id={generation_id}, path={file_path}, size={len(response.content)}")
 
         return str(file_path)
+
+    async def _ensure_mp4(self, video_url: str) -> str:
+        """Конвертировать видео в mp4, если оно не является mp4. Возвращает URL mp4-файла."""
+        # Извлекаем имя файла из URL
+        filename = video_url.rstrip("/").split("/")[-1]
+        ext = Path(filename).suffix.lower()
+
+        if ext == ".mp4":
+            return video_url
+
+        orig_path = STORAGE_DIR / "uploads" / filename
+        if not orig_path.exists():
+            logger.warning(f"_ensure_mp4: файл не найден локально, пропускаем конвертацию | path={orig_path}")
+            return video_url
+
+        mp4_filename = Path(filename).stem + "_conv.mp4"
+        mp4_path = STORAGE_DIR / "uploads" / mp4_filename
+
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                "ffmpeg", "-i", str(orig_path),
+                "-c:v", "libx264", "-c:a", "aac",
+                "-movflags", "+faststart",
+                "-y", str(mp4_path),
+                stdout=asyncio.subprocess.DEVNULL,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            _, stderr = await proc.communicate()
+            if proc.returncode != 0:
+                logger.error(f"_ensure_mp4: ffmpeg завершился с ошибкой | {stderr.decode()}")
+                return video_url
+
+            # Заменяем оригинал конвертированным файлом
+            orig_path.unlink(missing_ok=True)
+            mp4_path.rename(orig_path.with_suffix(".mp4"))
+            mp4_url = video_url.rsplit("/", 1)[0] + "/" + orig_path.with_suffix(".mp4").name
+
+            logger.info(f"_ensure_mp4: конвертировано | {filename} -> {orig_path.with_suffix('.mp4').name}")
+            return mp4_url
+
+        except Exception as e:
+            logger.error(f"_ensure_mp4: ошибка конвертации | {e}")
+            return video_url
 
     async def _generate_video_thumbnail(self, video_path: str) -> str | None:
         """Извлечь первый кадр видео как thumbnail через ffmpeg."""

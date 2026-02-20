@@ -137,39 +137,6 @@ async def upload_file(
         except Exception as e:
             logger.warning(f"Could not check video duration | {e}")
 
-    # Convert non-mp4 video to mp4
-    if is_video and ext != "mp4":
-        mp4_filename = f"{uuid.uuid4()}.mp4"
-        mp4_filepath = UPLOAD_DIR / mp4_filename
-        try:
-            proc = await asyncio.create_subprocess_exec(
-                "ffmpeg", "-i", str(filepath),
-                "-c:v", "libx264", "-c:a", "aac",
-                "-movflags", "+faststart",
-                "-y", str(mp4_filepath),
-                stdout=asyncio.subprocess.DEVNULL,
-                stderr=asyncio.subprocess.PIPE,
-            )
-            _, stderr = await proc.communicate()
-            if proc.returncode != 0:
-                logger.error(f"ffmpeg conversion failed | {stderr.decode()}")
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail="Ошибка конвертации видео"
-                )
-            # Remove original and use mp4
-            filepath.unlink(missing_ok=True)
-            filename = mp4_filename
-            filepath = mp4_filepath
-            logger.info(f"Video converted to mp4 | original_ext={ext}, new_file={mp4_filename}")
-        except HTTPException:
-            raise
-        except Exception as e:
-            logger.error(f"Video conversion error | {e}")
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Ошибка конвертации видео"
-            )
     
     # Build URL
     url = f"{settings.WEBAPP_URL}/static/uploads/{filename}"
