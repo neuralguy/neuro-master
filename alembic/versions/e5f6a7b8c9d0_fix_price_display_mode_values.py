@@ -18,7 +18,7 @@ depends_on = None
 def upgrade() -> None:
     conn = op.get_bind()
 
-    # Проверяем тип колонки — если уже VARCHAR, пропускаем конвертацию
+    # Проверяем тип колонки
     result = conn.execute(sa.text("""
         SELECT data_type FROM information_schema.columns
         WHERE table_name='ai_models' AND column_name='price_display_mode'
@@ -32,15 +32,31 @@ def upgrade() -> None:
                 USING price_display_mode::TEXT
         """))
 
+    # Проверяем существует ли enum тип
+    enum_exists = conn.execute(sa.text("""
+        SELECT 1 FROM pg_type WHERE typname = 'pricedisplaymode'
+    """)).fetchone()
+
+    if enum_exists:
+        # Сначала сбрасываем server_default у колонки (он может ссылаться на enum)
+        conn.execute(sa.text("""
+            ALTER TABLE ai_models
+                ALTER COLUMN price_display_mode DROP DEFAULT
+        """))
+        # Теперь можно дропнуть тип
+        conn.execute(sa.text("DROP TYPE IF EXISTS pricedisplaymode CASCADE"))
+        # Восстанавливаем server_default как простую строку
+        conn.execute(sa.text("""
+            ALTER TABLE ai_models
+                ALTER COLUMN price_display_mode SET DEFAULT 'fixed'
+        """))
+
     # Приводим все значения к lowercase (на случай если были uppercase)
     conn.execute(sa.text("""
         UPDATE ai_models
         SET price_display_mode = LOWER(price_display_mode)
         WHERE price_display_mode != LOWER(price_display_mode)
     """))
-
-    # Дропаем старый PostgreSQL enum тип если остался
-    conn.execute(sa.text("DROP TYPE IF EXISTS pricedisplaymode"))
 
 
 def downgrade() -> None:
