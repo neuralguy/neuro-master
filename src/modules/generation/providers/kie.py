@@ -76,9 +76,104 @@ class KieProvider(BaseGenerationProvider):
                     message=str(e),
                 )
 
+    # Veo-модели используют отдельные эндпоинты
+    _VEO_MODELS = {"veo3", "veo3_fast"}
+
+    def _is_veo(self, model: str) -> bool:
+        return model in self._VEO_MODELS
+
+    async def _create_veo_task(self, request: GenerationRequest) -> GenerationTask:
+        """Создать задачу через veo-эндпоинт /api/v1/veo/generate."""
+        # Определяем тип генерации
+        has_image = bool(request.image_urls or request.image_url)
+        generation_type = "FIRST_AND_LAST_FRAMES_2_VIDEO" if has_image else "TEXT_2_VIDEO"
+
+        payload: dict = {
+            "model": request.model,
+            "prompt": request.prompt or "",
+            "aspect_ratio": request.aspect_ratio,
+            "generationType": generation_type,
+        }
+
+        if has_image:
+            if request.image_urls:
+                payload["imageUrls"] = request.image_urls
+            elif request.image_url:
+                payload["imageUrls"] = [request.image_url]
+
+        logger.info(f"Creating kie.ai veo task | model={request.model}, generationType={generation_type}")
+        logger.debug(f"kie.ai veo payload | {payload}")
+
+        response = await self._request(
+            method="POST",
+            endpoint="/veo/generate",
+            json_data=payload,
+        )
+
+        task_id = response.get("data", {}).get("taskId")
+        if not task_id:
+            raise ExternalAPIError(
+                service="kie.ai",
+                message="No taskId in veo response",
+            )
+
+        logger.info(f"kie.ai veo task created | task_id={task_id}")
+        return GenerationTask(
+            task_id=task_id,
+            status="pending",
+            raw_response=response,
+        )
+
+    async def _get_veo_task_status(self, task_id: str) -> GenerationTask:
+        """Получить статус veo-задачи через /api/v1/veo/record-info."""
+        response = await self._request(
+            method="GET",
+            endpoint="/veo/record-info",
+            params={"taskId": task_id},
+        )
+
+        data = response.get("data", {})
+        state = data.get("state", "unknown")
+
+        status_map = {
+            "waiting": "pending",
+            "queuing": "pending",
+            "generating": "processing",
+            "success": "success",
+            "fail": "failed",
+            "failed": "failed",
+        }
+        status = status_map.get(state, state)
+
+        result_url = None
+        error = None
+
+        if status == "success":
+            result_url = (
+                data.get("videoUrl")
+                or data.get("video_url")
+                or data.get("url")
+            )
+        elif status == "failed":
+            error = data.get("errorMessage") or data.get("failMsg") or "Generation failed"
+
+        logger.debug(f"kie.ai veo task status | task_id={task_id}, status={status}, result_url={result_url}")
+
+        return GenerationTask(
+            task_id=task_id,
+            status=status,
+            result_url=result_url,
+            error=error,
+            raw_response=response,
+        )
+
     async def create_task(self, request: GenerationRequest) -> GenerationTask:
         """Create a new generation task on kie.ai."""
-        
+
+        # Veo-модели используют отдельный эндпоинт
+        if self._is_veo(request.model):
+            return await self._create_veo_task(request)
+
         # Check if this is a motion control request
         is_motion_control = "motion-control" in request.model
         
@@ -157,7 +252,11 @@ class KieProvider(BaseGenerationProvider):
 
     async def get_task_status(self, task_id: str) -> GenerationTask:
         """Get status of a generation task."""
-        
+
+        # Veo task_id имеет префикс veo_
+        if task_id.startswith("veo_"):
+            return await self._get_veo_task_status(task_id)
+
         response = await self._request(
             method="GET",
             endpoint="/jobs/recordInfo",
