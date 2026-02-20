@@ -126,7 +126,7 @@ class GenerationService:
         # Record balance change
         await self.balance_history_repo.create(
             user_id=user_id,
-            amount=-model.price_tokens,
+            amount=-cost,
             balance_after=new_balance,
             operation_type=BalanceOperationType.GENERATION,
             description=f"Генерация: {model.name}",
