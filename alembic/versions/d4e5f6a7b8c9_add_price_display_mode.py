@@ -16,15 +16,11 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # Создаём enum тип в PostgreSQL
-    price_display_mode_enum = sa.Enum('per_second', 'fixed', name='pricedisplaymode')
-    price_display_mode_enum.create(op.get_bind(), checkfirst=True)
-
     with op.batch_alter_table('ai_models', schema=None) as batch_op:
         batch_op.add_column(
             sa.Column(
                 'price_display_mode',
-                sa.Enum('per_second', 'fixed', name='pricedisplaymode'),
+                sa.String(50),
                 nullable=False,
                 server_default='fixed',
             )
@@ -34,5 +30,3 @@ def upgrade() -> None:
 def downgrade() -> None:
     with op.batch_alter_table('ai_models', schema=None) as batch_op:
         batch_op.drop_column('price_display_mode')
-
-    sa.Enum(name='pricedisplaymode').drop(op.get_bind(), checkfirst=True)

@@ -1,4 +1,4 @@
-"""fix price_display_mode enum values to lowercase
+"""fix price_display_mode: convert from pg enum to varchar with lowercase values
 
 Revision ID: e5f6a7b8c9d0
 Revises: d4e5f6a7b8c9
@@ -18,56 +18,26 @@ depends_on = None
 def upgrade() -> None:
     conn = op.get_bind()
 
-    # Проверяем какие значения сейчас в колонке
-    # и конвертируем uppercase → lowercase если нужно
+    # Конвертируем колонку из PostgreSQL enum в VARCHAR
+    # (USING приводит значение через TEXT)
     conn.execute(sa.text("""
         ALTER TABLE ai_models
             ALTER COLUMN price_display_mode TYPE VARCHAR(50)
+            USING price_display_mode::TEXT
     """))
 
-    # Приводим существующие значения к lowercase
+    # Приводим все значения к lowercase (на случай если они были uppercase)
     conn.execute(sa.text("""
         UPDATE ai_models
         SET price_display_mode = LOWER(price_display_mode)
     """))
 
-    # Дропаем старый enum тип
+    # Дропаем старый PostgreSQL enum тип
     conn.execute(sa.text("DROP TYPE IF EXISTS pricedisplaymode"))
-
-    # Создаём новый enum с lowercase значениями
-    conn.execute(sa.text("""
-        CREATE TYPE pricedisplaymode AS ENUM ('per_second', 'fixed')
-    """))
-
-    # Переключаем колонку обратно на enum
-    conn.execute(sa.text("""
-        ALTER TABLE ai_models
-            ALTER COLUMN price_display_mode TYPE pricedisplaymode
-            USING price_display_mode::pricedisplaymode
-    """))
 
 
 def downgrade() -> None:
     conn = op.get_bind()
 
-    conn.execute(sa.text("""
-        ALTER TABLE ai_models
-            ALTER COLUMN price_display_mode TYPE VARCHAR(50)
-    """))
-
-    conn.execute(sa.text("""
-        UPDATE ai_models
-        SET price_display_mode = UPPER(price_display_mode)
-    """))
-
-    conn.execute(sa.text("DROP TYPE IF EXISTS pricedisplaymode"))
-
-    conn.execute(sa.text("""
-        CREATE TYPE pricedisplaymode AS ENUM ('PER_SECOND', 'FIXED')
-    """))
-
-    conn.execute(sa.text("""
-        ALTER TABLE ai_models
-            ALTER COLUMN price_display_mode TYPE pricedisplaymode
-            USING price_display_mode::pricedisplaymode
-    """))
+    # При откате просто оставляем VARCHAR — это безопасно
+    pass

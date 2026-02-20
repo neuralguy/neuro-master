@@ -36,7 +36,7 @@ class AIModel(Base):
     price_per_second: Mapped[float | None] = mapped_column(Float, nullable=True)
     # If price_per_second is set, the total cost = price_per_second * duration (for video models)
     price_display_mode: Mapped[PriceDisplayMode] = mapped_column(
-        Enum(PriceDisplayMode, values_callable=lambda e: [x.value for x in e]),
+        Enum(PriceDisplayMode, values_callable=lambda e: [x.value for x in e], native_enum=False),
         nullable=False,
         default=PriceDisplayMode.FIXED,
     )
