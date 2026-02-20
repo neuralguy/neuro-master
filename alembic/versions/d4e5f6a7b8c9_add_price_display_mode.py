@@ -16,15 +16,20 @@ depends_on = None
 
 
 def upgrade() -> None:
-    with op.batch_alter_table('ai_models', schema=None) as batch_op:
-        batch_op.add_column(
-            sa.Column(
-                'price_display_mode',
-                sa.String(50),
-                nullable=False,
-                server_default='fixed',
+    conn = op.get_bind()
+    columns = [row[0] for row in conn.execute(sa.text(
+        "SELECT column_name FROM information_schema.columns WHERE table_name='ai_models'"
+    ))]
+    if 'price_display_mode' not in columns:
+        with op.batch_alter_table('ai_models', schema=None) as batch_op:
+            batch_op.add_column(
+                sa.Column(
+                    'price_display_mode',
+                    sa.String(50),
+                    nullable=False,
+                    server_default='fixed',
+                )
             )
-        )
 
 
 def downgrade() -> None:

@@ -17,10 +17,15 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.add_column(
-        'ai_models',
-        sa.Column('price_per_second', sa.Float(), nullable=True)
-    )
+    conn = op.get_bind()
+    columns = [row[0] for row in conn.execute(sa.text(
+        "SELECT column_name FROM information_schema.columns WHERE table_name='ai_models'"
+    ))]
+    if 'price_per_second' not in columns:
+        op.add_column(
+            'ai_models',
+            sa.Column('price_per_second', sa.Float(), nullable=True)
+        )
 
 
 def downgrade() -> None:
