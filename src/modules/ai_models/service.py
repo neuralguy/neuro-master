@@ -316,7 +316,7 @@ DEFAULT_MODELS = [
 
     # ==================== VIDEO: Text-to-Video ====================
     {
-        "code": "veo3-fast",
+        "code": "veo3_fast",
         "name": "Veo 3.1 Fast",
         "description": "Google Veo 3.1 — быстрая генерация видео со звуком",
         "provider": "kie.ai",
@@ -328,7 +328,7 @@ DEFAULT_MODELS = [
         "config": {"aspect_ratios": ["16:9", "9:16"], "durations": [8], "mode": "text-to-video"},
     },
     {
-        "code": "veo3-quality",
+        "code": "veo3",
         "name": "Veo 3.1 Quality",
         "description": "Google Veo 3.1 — высокое качество видео",
         "provider": "kie.ai",
@@ -462,7 +462,7 @@ DEFAULT_MODELS = [
 
     # ==================== VIDEO: Image-to-Video ====================
     {
-        "code": "veo3-fast-i2v",
+        "code": "veo3_fast",
         "name": "Veo 3.1 Fast",
         "description": "Google Veo 3.1 — видео из изображения",
         "provider": "kie.ai",
