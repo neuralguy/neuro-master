@@ -184,10 +184,10 @@ export default function GeneratePage() {
     }
   }, [selectedModel]);
 
-  // Calculate cost based on price_per_second and selected duration
+  // Calculate cost based on price_display_mode and selected duration
   const currentCost = (() => {
     if (!selectedModel) return 0;
-    if (selectedModel.price_per_second != null && duration != null) {
+    if (selectedModel.price_display_mode === 'per_second' && selectedModel.price_per_second != null && duration != null) {
       return Math.round(selectedModel.price_per_second * duration);
     }
     return selectedModel.price_tokens;
@@ -475,7 +475,7 @@ export default function GeneratePage() {
                         )}
                       </div>
                       <span className="text-xs text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-lg">
-                        {model.price_per_second != null ? `${model.price_per_second}⭐/с` : `${model.price_tokens}⭐`}
+                        {model.price_display_mode === 'per_second' && model.price_per_second != null ? `${model.price_per_second}⭐/с` : `${model.price_tokens}⭐`}
                       </span>
                     </button>
                   ))}
@@ -527,7 +527,7 @@ export default function GeneratePage() {
                   onClick={(e) => e.stopPropagation()}
                 >
                   {availableDurations.map((d) => {
-                    const dCost = selectedModel?.price_per_second != null
+                    const dCost = selectedModel?.price_display_mode === 'per_second' && selectedModel?.price_per_second != null
                       ? Math.round(selectedModel.price_per_second * d)
                       : selectedModel?.price_tokens ?? 0;
                     return (

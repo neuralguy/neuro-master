@@ -17,7 +17,7 @@ from src.modules.generation.providers import GenerationRequest, kie_provider, po
 from src.modules.generation.repository import GenerationRepository
 from src.modules.payments.repository import BalanceHistoryRepository
 from src.modules.user.repository import UserRepository
-from src.shared.enums import BalanceOperationType, GenerationStatus, GenerationType
+from src.shared.enums import BalanceOperationType, GenerationStatus, GenerationType, PriceDisplayMode
 from src.shared.logger import logger
 
 
@@ -88,8 +88,12 @@ class GenerationService:
         if not user:
             raise NotFoundError("Пользователь", user_id)
 
-        # Calculate cost: if model has price_per_second and duration provided — multiply
-        if model.price_per_second is not None and duration is not None:
+        # Расчёт стоимости согласно price_display_mode
+        if (
+            model.price_display_mode == PriceDisplayMode.PER_SECOND
+            and model.price_per_second is not None
+            and duration is not None
+        ):
             cost = model.price_per_second * duration
         else:
             cost = model.price_tokens
