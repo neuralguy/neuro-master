@@ -126,7 +126,7 @@ class AIModelService:
 #
 # RULES:
 #   - ALL image models → provider: poyo.ai
-#   - Video: veo3 models → provider: poyo.ai
+#   - Video: veo3 models → provider: kie.ai
 #   - Video: everything else (kling, sora, hailuo, wan, runway, grok-imagine) → provider: kie.ai
 #
 # poyo.ai provider_model = the model name as listed in poyo.ai docs
@@ -319,10 +319,10 @@ DEFAULT_MODELS = [
         "code": "veo3-fast",
         "name": "Veo 3.1 Fast",
         "description": "Google Veo 3.1 — быстрая генерация видео со звуком",
-        "provider": "poyo.ai",
-        "provider_model": "veo3.1-fast",
+        "provider": "kie.ai",
+        "provider_model": "veo3_fast",
         "generation_type": "video",
-        "price_tokens": 8,  # фикс 8 сек, цена за секунду
+        "price_tokens": 8,
         "price_per_second": 8,
         "icon": "🎬",
         "config": {"aspect_ratios": ["16:9", "9:16"], "durations": [8], "mode": "text-to-video"},
@@ -331,10 +331,10 @@ DEFAULT_MODELS = [
         "code": "veo3-quality",
         "name": "Veo 3.1 Quality",
         "description": "Google Veo 3.1 — высокое качество видео",
-        "provider": "poyo.ai",
-        "provider_model": "veo3.1-quality",
+        "provider": "kie.ai",
+        "provider_model": "veo3",
         "generation_type": "video",
-        "price_tokens": 8,  # фикс 8 сек, цена за секунду
+        "price_tokens": 8,
         "price_per_second": 8,
         "icon": "🎬",
         "config": {"aspect_ratios": ["16:9", "9:16"], "durations": [8], "mode": "text-to-video"},
@@ -346,7 +346,7 @@ DEFAULT_MODELS = [
         "provider": "poyo.ai",
         "provider_model": "kling-3.0/standard",
         "generation_type": "video",
-        "price_tokens": 4,  # цена за секунду
+        "price_tokens": 4,
         "price_per_second": 4,
         "icon": "🎞️",
         "config": {"aspect_ratios": ["16:9", "9:16", "1:1"], "durations": [3, 5, 10, 15], "mode": "text-to-video"},
@@ -358,7 +358,7 @@ DEFAULT_MODELS = [
         "provider": "poyo.ai",
         "provider_model": "kling-3.0/pro",
         "generation_type": "video",
-        "price_tokens": 6,  # цена за секунду
+        "price_tokens": 6,
         "price_per_second": 6,
         "icon": "🎞️",
         "config": {"aspect_ratios": ["16:9", "9:16", "1:1"], "durations": [3, 5, 10, 15], "mode": "text-to-video"},
@@ -370,7 +370,7 @@ DEFAULT_MODELS = [
         "provider": "poyo.ai",
         "provider_model": "kling-2.6",
         "generation_type": "video",
-        "price_tokens": 4,  # цена за секунду
+        "price_tokens": 4,
         "price_per_second": 4,
         "icon": "🎞️",
         "config": {"aspect_ratios": ["16:9", "9:16", "1:1"], "durations": [5, 10], "mode": "text-to-video"},
@@ -382,7 +382,7 @@ DEFAULT_MODELS = [
         "provider": "poyo.ai",
         "provider_model": "sora-2",
         "generation_type": "video",
-        "price_tokens": 5,  # цена за секунду
+        "price_tokens": 5,
         "price_per_second": 5,
         "icon": "🎥",
         "config": {"aspect_ratios": ["16:9", "9:16", "1:1"], "durations": [10, 15], "mode": "text-to-video"},
@@ -394,7 +394,7 @@ DEFAULT_MODELS = [
         "provider": "poyo.ai",
         "provider_model": "sora-2-pro",
         "generation_type": "video",
-        "price_tokens": 5,  # цена за секунду
+        "price_tokens": 5,
         "price_per_second": 5,
         "icon": "🎥",
         "config": {"aspect_ratios": ["16:9", "9:16", "1:1"], "durations": [15, 25], "mode": "text-to-video"},
@@ -406,7 +406,7 @@ DEFAULT_MODELS = [
         "provider": "poyo.ai",
         "provider_model": "seedance-1.5-pro",
         "generation_type": "video",
-        "price_tokens": 5,  # цена за секунду
+        "price_tokens": 5,
         "price_per_second": 5,
         "icon": "🌱",
         "config": {"aspect_ratios": ["16:9", "9:16"], "durations": [4, 8, 12], "mode": "text-to-video"},
@@ -418,7 +418,7 @@ DEFAULT_MODELS = [
         "provider": "poyo.ai",
         "provider_model": "hailuo-02-pro",
         "generation_type": "video",
-        "price_tokens": 6,  # фикс 6 сек, цена за секунду
+        "price_tokens": 6,
         "price_per_second": 6,
         "icon": "🌊",
         "config": {"aspect_ratios": ["16:9", "9:16"], "durations": [6], "mode": "text-to-video"},
@@ -430,7 +430,7 @@ DEFAULT_MODELS = [
         "provider": "poyo.ai",
         "provider_model": "wan2.6-text-to-video",
         "generation_type": "video",
-        "price_tokens": 3,  # цена за секунду
+        "price_tokens": 3,
         "price_per_second": 3,
         "icon": "🎭",
         "config": {"aspect_ratios": ["16:9", "9:16"], "durations": [5, 10, 15], "mode": "text-to-video"},
@@ -442,7 +442,7 @@ DEFAULT_MODELS = [
         "provider": "poyo.ai",
         "provider_model": "grok-imagine",
         "generation_type": "video",
-        "price_tokens": 4,  # цена за секунду
+        "price_tokens": 4,
         "price_per_second": 4,
         "icon": "🚀",
         "config": {"aspect_ratios": ["1:1", "2:3", "3:2"], "durations": [6, 10], "mode": "text-to-video"},
@@ -454,7 +454,7 @@ DEFAULT_MODELS = [
         "provider": "kie.ai",
         "provider_model": "runway",
         "generation_type": "video",
-        "price_tokens": 6,  # цена за секунду
+        "price_tokens": 6,
         "price_per_second": 6,
         "icon": "🛫",
         "config": {"aspect_ratios": ["16:9", "9:16", "1:1", "4:3", "3:4"], "durations": [5, 10], "mode": "text-to-video"},
@@ -465,10 +465,10 @@ DEFAULT_MODELS = [
         "code": "veo3-fast-i2v",
         "name": "Veo 3.1 Fast",
         "description": "Google Veo 3.1 — видео из изображения",
-        "provider": "poyo.ai",
-        "provider_model": "veo3.1-fast",
+        "provider": "kie.ai",
+        "provider_model": "veo3_fast",
         "generation_type": "video",
-        "price_tokens": 8,  # фикс 8 сек, цена за секунду
+        "price_tokens": 8,
         "price_per_second": 8,
         "icon": "🎬",
         "config": {"aspect_ratios": ["16:9", "9:16"], "durations": [8], "mode": "image-to-video"},
@@ -480,7 +480,7 @@ DEFAULT_MODELS = [
         "provider": "poyo.ai",
         "provider_model": "kling-3.0/standard",
         "generation_type": "video",
-        "price_tokens": 4,  # цена за секунду
+        "price_tokens": 4,
         "price_per_second": 4,
         "icon": "🎞️",
         "config": {"aspect_ratios": ["16:9", "9:16", "1:1"], "durations": [3, 5, 10, 15], "mode": "image-to-video"},
@@ -492,7 +492,7 @@ DEFAULT_MODELS = [
         "provider": "kie.ai",
         "provider_model": "kling-2.6/image-to-video",
         "generation_type": "video",
-        "price_tokens": 4,  # цена за секунду
+        "price_tokens": 4,
         "price_per_second": 4,
         "icon": "🎞️",
         "config": {"aspect_ratios": ["16:9", "9:16", "1:1"], "durations": [5, 10], "mode": "image-to-video"},
@@ -504,7 +504,7 @@ DEFAULT_MODELS = [
         "provider": "poyo.ai",
         "provider_model": "sora-2",
         "generation_type": "video",
-        "price_tokens": 5,  # цена за секунду
+        "price_tokens": 5,
         "price_per_second": 5,
         "icon": "🎥",
         "config": {"aspect_ratios": ["16:9", "9:16", "1:1"], "durations": [10, 15], "mode": "image-to-video"},
@@ -516,7 +516,7 @@ DEFAULT_MODELS = [
         "provider": "poyo.ai",
         "provider_model": "seedance-1.5-pro",
         "generation_type": "video",
-        "price_tokens": 5,  # цена за секунду
+        "price_tokens": 5,
         "price_per_second": 5,
         "icon": "🌱",
         "config": {"aspect_ratios": ["16:9", "9:16"], "durations": [4, 8, 12], "mode": "image-to-video"},
@@ -528,7 +528,7 @@ DEFAULT_MODELS = [
         "provider": "poyo.ai",
         "provider_model": "wan2.6-image-to-video",
         "generation_type": "video",
-        "price_tokens": 3,  # цена за секунду
+        "price_tokens": 3,
         "price_per_second": 3,
         "icon": "🎭",
         "config": {"aspect_ratios": ["16:9", "9:16"], "durations": [5, 10, 15], "mode": "image-to-video"},
@@ -540,7 +540,7 @@ DEFAULT_MODELS = [
         "provider": "kie.ai",
         "provider_model": "hailuo/02-image-to-video-pro",
         "generation_type": "video",
-        "price_tokens": 6,  # цена за секунду
+        "price_tokens": 6,
         "price_per_second": 6,
         "icon": "🌊",
         "config": {"aspect_ratios": ["16:9", "9:16"], "durations": [6, 10], "mode": "image-to-video"},
@@ -552,7 +552,7 @@ DEFAULT_MODELS = [
         "provider": "poyo.ai",
         "provider_model": "grok-imagine",
         "generation_type": "video",
-        "price_tokens": 4,  # цена за секунду
+        "price_tokens": 4,
         "price_per_second": 4,
         "icon": "🚀",
         "config": {"aspect_ratios": ["1:1", "2:3", "3:2"], "durations": [6, 10], "mode": "image-to-video"},
@@ -564,7 +564,7 @@ DEFAULT_MODELS = [
         "provider": "kie.ai",
         "provider_model": "runway",
         "generation_type": "video",
-        "price_tokens": 6,  # цена за секунду
+        "price_tokens": 6,
         "price_per_second": 6,
         "icon": "🛫",
         "config": {"aspect_ratios": ["16:9", "9:16", "1:1", "4:3", "3:4"], "durations": [5, 10], "mode": "image-to-video"},
@@ -578,7 +578,7 @@ DEFAULT_MODELS = [
         "provider": "kie.ai",
         "provider_model": "kling-2.6/motion-control",
         "generation_type": "video",
-        "price_tokens": 1,       # цена за секунду (длительность = длина загруженного видео)
+        "price_tokens": 1,
         "price_per_second": 1,
         "price_display_mode": "per_second",
         "icon": "🕺",
@@ -589,6 +589,7 @@ DEFAULT_MODELS = [
         },
     },
 ]
+
 
 async def seed_default_models(session: AsyncSession) -> None:
     """Seed default AI models to database."""
