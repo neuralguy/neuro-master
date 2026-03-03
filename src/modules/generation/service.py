@@ -252,7 +252,7 @@ class GenerationService:
         generation_id: uuid.UUID,
         task_id: str,
         max_attempts: int = 120,
-        interval: float = 3.0,
+        interval: float = 5.0,
         provider_name: str = "kie.ai",
         telegram_id: int | None = None,
     ) -> None:
